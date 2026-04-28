@@ -482,6 +482,10 @@ async function extractDocxPages(file) {
   const arrayBuffer = await file.arrayBuffer();
   const detectedFont = await detectDocxFont(arrayBuffer);
   if (detectedFont) setDetectedDocumentFont(detectedFont);
+  const xmlText = await extractDocxTextFromXml(arrayBuffer);
+  if (xmlText && readableTextScore(xmlText) >= 0.35) {
+    return splitTextIntoPages(cleanImportedWordText(xmlText));
+  }
   const result = await window.mammoth.extractRawText({ arrayBuffer });
   return splitTextIntoPages(cleanImportedWordText(result.value || ""));
 }
@@ -510,6 +514,37 @@ async function detectDocxFont(arrayBuffer) {
       .map(([font]) => font)
       .find((font) => /mlw|karthika|kartika|rachana|anjali|malayalam|meera|nirmala/i.test(font));
     return preferred || Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+  } catch {
+    return "";
+  }
+}
+
+function decodeXmlEntities(value) {
+  return value
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+}
+
+async function extractDocxTextFromXml(arrayBuffer) {
+  if (!window.JSZip) return "";
+  try {
+    const zip = await window.JSZip.loadAsync(arrayBuffer);
+    const file = zip.file("word/document.xml");
+    if (!file) return "";
+    const xml = await file.async("text");
+    return xml
+      .match(/<w:t\b[^>]*>[\s\S]*?<\/w:t>|<w:tab\b[^>]*\/>|<w:br\b[^>]*\/>|<\/w:p>/g)
+      ?.map((part) => {
+        if (/^<w:tab\b/.test(part)) return "\t";
+        if (/^<w:br\b|^<\/w:p>/.test(part)) return "\n";
+        return decodeXmlEntities(part.replace(/^<w:t\b[^>]*>/, "").replace(/<\/w:t>$/, ""));
+      })
+      .join("")
+      .replace(/\n{3,}/g, "\n\n")
+      .trimEnd() || "";
   } catch {
     return "";
   }
