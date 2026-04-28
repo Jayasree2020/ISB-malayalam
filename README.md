@@ -23,6 +23,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 - Adds manual text blocks and editable tables for layout correction.
 - Adds Undo, Redo, Delete, and Options controls in the Malayalam editing section.
 - Keeps the BSI Bible text box on the left and the project title above the editing window.
+- Treats the Malayalam translation/editing window as the main document. Word/PDF/InDesign exports use only that window.
 - Displays Malayalam editing text with `MLW-TTKarthika` first in the font stack.
 - Keeps normal Western numerals and preserves English abbreviations when Malayalam text is pasted into layout blocks.
 - Preserves imported Word spacing, line breaks, indentation, and tabs as closely as possible in the editing window.
@@ -56,8 +57,8 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 9. Use `Page Layout` mode to edit Malayalam in positioned blocks that follow the English page spacing, columns, and table-like line positions.
 10. Use `Undo`, `Redo`, and `Delete` in the Malayalam editing section if a block/table/action was added by mistake.
 11. Use `Previous`, `Next`, or the page number field to move through both documents together.
-12. Paste licensed BSI Malayalam Bible text in the BSI box.
-13. Click `Place at Top`.
+12. Paste licensed BSI Malayalam Bible text in the BSI helper box only when you need it as reference.
+13. Click `Insert into Malayalam Editor` only if that BSI text should become part of the edited Malayalam document.
 14. Use `Compose` to add verse numbers, references, symbols, glossary words, translation suggestions, and notes.
 15. Use `Normalize Text` to clean references and number style.
 16. Use `Run Checks` before export.
@@ -164,7 +165,7 @@ When the API is not configured, the editor opens Google Translate in a new brows
 
 ## Print And InDesign Plan
 
-Current export uses the Malayalam editing window content and gives you Word-compatible `.doc`, browser PDF, InDesign HTML, InDesign Tagged Text, and JSON. For a 3000-4000 page print project, the next production step should be a deeper style-controlled export layer:
+Current export uses only the Malayalam editing window content and gives you Word-compatible `.doc`, browser PDF, InDesign HTML, InDesign Tagged Text, and JSON. BSI helper text is not exported unless it is inserted into the Malayalam editing window. For a 3000-4000 page print project, the next production step should be a deeper style-controlled export layer:
 
 - Paragraph styles: `VerseText`, `NoteText`, `ArticleTitle`, `ArticleBody`, `TableText`, `MapCaption`.
 - Character styles: `VerseNumber`, `BibleReference`, `FootnoteSymbol`, `TranslatorNote`.
