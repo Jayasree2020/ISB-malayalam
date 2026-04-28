@@ -296,7 +296,7 @@ h2 {
   overflow: hidden;
 }
 
-.layout-line {
+.layout-block {
   position: absolute;
   min-height: 18px;
   padding: 1px 3px;
@@ -310,16 +310,47 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-.layout-line:hover,
-.layout-line:focus {
+.layout-block:hover,
+.layout-block:focus,
+.layout-table:focus-within {
   border-color: var(--accent);
   background: #fff;
   outline: none;
 }
 
+.layout-table {
+  position: absolute;
+  padding: 2px;
+  border: 1px dashed var(--accent);
+  background: #fff;
+  overflow: auto;
+}
+
+.layout-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Nirmala UI", "Kartika", "Rachana", "AnjaliOldLipi", serif;
+  font-size: 13px;
+}
+
+.layout-table td {
+  border: 1px solid var(--line);
+  min-width: 54px;
+  min-height: 24px;
+  padding: 4px;
+  vertical-align: top;
+}
+
 .layout-empty {
   padding: 14px;
   color: var(--muted);
+}
+
+.layout-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .compose-grid {
