@@ -55,6 +55,7 @@
           <div class="button-row">
             <button id="prevPageBtn" type="button">Previous</button>
             <button id="nextPageBtn" type="button">Next</button>
+            <button id="copyLayoutBtn" type="button">Copy Source Layout</button>
           </div>
           <label>
             Page
@@ -122,8 +123,15 @@ salvation=രക്ഷ</textarea>
               </label>
             </section>
             <label class="editor-block">
-              Editable Malayalam Translation
+              <span class="editor-title-row">
+                Editable Malayalam Translation
+                <span class="mode-buttons">
+                  <button id="textModeBtn" class="secondary" type="button">Text</button>
+                  <button id="layoutModeBtn" class="secondary" type="button">Page Layout</button>
+                </span>
+              </span>
               <textarea id="malayalamText" lang="ml" placeholder="Upload Malayalam PDF/DOCX/text or type Malayalam translation here."></textarea>
+              <div id="malayalamLayoutEditor" class="layout-editor hidden" lang="ml"></div>
             </label>
           </div>
         </div>
