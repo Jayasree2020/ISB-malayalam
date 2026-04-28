@@ -480,7 +480,8 @@ function renderMalayalamLayout() {
   const layout = malayalamLayouts[currentPage - 1];
 
   if (!layout?.lines?.length) {
-    editor.innerHTML = '<p class="layout-empty">Click Copy Source Layout to create editable Malayalam blocks with the English page format.</p>';
+    editor.innerHTML = '<div class="layout-empty"><p>Click Copy Source Layout to create editable Malayalam blocks with the English page format.</p><button id="copyLayoutEmptyBtn" type="button">Copy Source Layout</button></div>';
+    $("copyLayoutEmptyBtn")?.addEventListener("click", createMalayalamLayoutFromSource);
     return;
   }
 
@@ -818,6 +819,7 @@ function bindEvents() {
   $("nextPageBtn").addEventListener("click", () => showPage(currentPage + 1));
   $("pageNumber").addEventListener("change", () => showPage($("pageNumber").value));
   $("copyLayoutBtn").addEventListener("click", createMalayalamLayoutFromSource);
+  $("copyLayoutInlineBtn").addEventListener("click", createMalayalamLayoutFromSource);
   $("textModeBtn").addEventListener("click", () => {
     persistCurrentPageEdits();
     malayalamEditMode = "text";
