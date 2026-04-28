@@ -75,7 +75,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 ## Notes On Your Latest Requirements
 
 - Glossary: type an English word in `English word meaning` and click `Find Malayalam Meaning`.
-- Browser save: click `Save` to store browser work, then click `Load` to restore it.
+- Browser save: click `Save` to store browser work, click `Load` to restore it, or click `Delete Saved` to remove saved browser work and clear the display.
 - Malayalam typing: use the Malayalam editor directly, the built-in Malayalam character buttons, or the `Google Malayalam Typing` button.
 - Word import: DOCX/RTF/PDF are most reliable. Legacy `.doc` is best effort; if text is missing, save the file as `.docx` or PDF and upload again.
 - Google എഴുത്ത് ഉപകരണങ്ങൾ: use the `Google Malayalam Typing` button in the Malayalam Typing panel.

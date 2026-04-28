@@ -250,6 +250,48 @@ async function saveLocal() {
   toast("Saved in this browser.");
 }
 
+function resetWorkspace() {
+  if (sourceViewerFile?.url) URL.revokeObjectURL(sourceViewerFile.url);
+  sourceViewerFile = null;
+  englishPages = [];
+  malayalamPages = [];
+  englishLayouts = [];
+  malayalamLayouts = [];
+  imageAssets = [];
+  selectedImageId = "";
+  selectedLayoutBlock = null;
+  currentPage = 1;
+  ["englishText", "malayalamText", "bsiText", "finalText", "editorNotes"].forEach((key) => {
+    if ($(key)) $(key).value = "";
+  });
+  if ($("projectTitle")) $("projectTitle").value = "Malayalam Translation Project";
+  if ($("englishFileInput")) $("englishFileInput").value = "";
+  if ($("malayalamFileInput")) $("malayalamFileInput").value = "";
+  updatePageStatus();
+  renderSourceViewer();
+  renderMalayalamLayout();
+  applyMalayalamMode();
+  renderImageGallery();
+  renderPreview();
+}
+
+async function deleteLocalSaves() {
+  if (!window.confirm("Delete saved browser work and clear the current display?")) return;
+  const db = await openLocalDb();
+  if (db) {
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction("projects", "readwrite");
+      transaction.objectStore("projects").clear();
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+  localStorage.removeItem("mlTranslationWorkbench:last");
+  localStorage.removeItem("mlTranslationWorkbench");
+  resetWorkspace();
+  toast("Saved browser work deleted. Upload files again to display them.");
+}
+
 async function loadLocal() {
   const current = snapshot();
   const id = localProjectId(current);
@@ -1350,6 +1392,7 @@ function bindEvents() {
 
   $("saveLocalBtn").addEventListener("click", saveLocal);
   $("loadLocalBtn").addEventListener("click", loadLocal);
+  $("deleteLocalBtn").addEventListener("click", deleteLocalSaves);
   $("saveCloudBtn").addEventListener("click", saveCloud);
   $("insertBsiBtn").addEventListener("click", placeBsiAtTop);
   $("applyGlossaryBtn").addEventListener("click", suggestWords);
