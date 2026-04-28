@@ -4,6 +4,8 @@ This project is a working starter for a Malayalam print-translation workflow: En
 
 Open `index.html` in a browser to use the local workspace immediately. Browser save works without any database setup. Deploy the same folder to Vercel when you want cloud saving and Google Translate inside the app.
 
+GitHub repo: `https://github.com/Jayasree2020/ISB-malayalam`
+
 ## Important Copyright Note
 
 Bible Society of India Malayalam Bible text is not bundled here. Paste or import BSI text only if your project has the required permission or license. The app gives you a place to use licensed text; it does not provide the text itself.
@@ -59,7 +61,18 @@ Local browser save works without setup. Cloud saving and in-app Google Translate
 
 ## Vercel Setup
 
-Install Node.js from `https://nodejs.org/`, then in this folder run:
+The easiest path is to deploy directly from GitHub:
+
+1. Open `https://vercel.com/new`.
+2. Import `Jayasree2020/ISB-malayalam`.
+3. Keep the framework preset as `Other`.
+4. Leave Build Command empty.
+5. Leave Output Directory empty.
+6. Deploy.
+
+The app works immediately after deployment with browser save/export. Cloud database save and in-app translation are optional.
+
+For local development, install Node.js from `https://nodejs.org/`, then in this folder run:
 
 ```bash
 npm install
@@ -76,7 +89,7 @@ npx vercel
 
 The no-work storage path is already included: use the `Save` button, and the project saves in your browser. This uses IndexedDB, which is better for larger editing sections than simple localStorage.
 
-For cloud storage, use Vercel-managed Neon Postgres. It is SQL, has a free tier, and is the easiest Vercel-friendly option. You should not need to create tables manually; the API creates the `translation_projects` table automatically on first save.
+For optional cloud storage, use Vercel-managed Neon Postgres. It is SQL, has a free tier, and is the easiest Vercel-friendly option. You should not need to create tables manually; the API creates the `translation_projects` table automatically on first save.
 
 In Vercel, add a Neon Postgres database from the Marketplace/Storage tab. Vercel will add `DATABASE_URL` to the project.
 
@@ -101,6 +114,16 @@ GOOGLE_APPLICATION_CREDENTIALS_JSON
 ```
 
 If you do not connect cloud storage, the editor still works locally through browser save and JSON export.
+
+## Deployment Check
+
+After Vercel deploys, open:
+
+```text
+https://YOUR-VERCEL-DOMAIN/api/health
+```
+
+You should see `ok: true`. The response also tells you whether database and translation environment variables are configured.
 
 ## Google Translate Setup
 
