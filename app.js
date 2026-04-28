@@ -61,6 +61,7 @@ if (localStorage.getItem("mlTranslationWorkbench:fontDefaultVersion") !== "mlw-d
   localStorage.setItem("mlTranslationWorkbench:fontDefaultVersion", "mlw-default-1");
 }
 let malayalamFontMode = localStorage.getItem("mlTranslationWorkbench:malayalamFontMode") || "mlw";
+let detectedDocumentFont = localStorage.getItem("mlTranslationWorkbench:detectedDocumentFont") || "";
 let autoSaveTimer = null;
 
 if (window.pdfjsLib) {
@@ -90,13 +91,27 @@ function applyMalayalamZoom(value) {
 }
 
 function applyMalayalamFontMode(mode = malayalamFontMode) {
-  malayalamFontMode = mode === "mlw" ? "mlw" : "unicode";
-  const fontStack = malayalamFontMode === "mlw"
-    ? '"MLW-TTKarthika", "Karthika", "Kartika", "Nirmala UI", serif'
-    : '"Nirmala UI", "Karthika", "Kartika", "Rachana", "AnjaliOldLipi", serif';
+  malayalamFontMode = ["document", "mlw", "unicode"].includes(mode) ? mode : "mlw";
+  const documentStack = detectedDocumentFont
+    ? `"${detectedDocumentFont}", "MLW-TTKarthika", "Karthika", "Kartika", "Nirmala UI", serif`
+    : '"MLW-TTKarthika", "Karthika", "Kartika", "Nirmala UI", serif';
+  const fontStack = malayalamFontMode === "document"
+    ? documentStack
+    : malayalamFontMode === "mlw"
+      ? '"MLW-TTKarthika", "Karthika", "Kartika", "Nirmala UI", serif'
+      : '"Nirmala UI", "Karthika", "Kartika", "Rachana", "AnjaliOldLipi", serif';
   document.documentElement.style.setProperty("--malayalam-font-family", fontStack);
   if ($("malayalamFontMode")) $("malayalamFontMode").value = malayalamFontMode;
   localStorage.setItem("mlTranslationWorkbench:malayalamFontMode", malayalamFontMode);
+}
+
+function setDetectedDocumentFont(fontName) {
+  if (!fontName) return;
+  detectedDocumentFont = fontName;
+  localStorage.setItem("mlTranslationWorkbench:detectedDocumentFont", detectedDocumentFont);
+  malayalamFontMode = "document";
+  applyMalayalamFontMode("document");
+  toast(`Using document font: ${fontName}`);
 }
 
 function snapshot() {
@@ -419,8 +434,39 @@ async function extractDocxPages(file) {
   }
 
   const arrayBuffer = await file.arrayBuffer();
+  const detectedFont = await detectDocxFont(arrayBuffer);
+  if (detectedFont) setDetectedDocumentFont(detectedFont);
   const result = await window.mammoth.extractRawText({ arrayBuffer });
   return splitTextIntoPages(cleanImportedWordText(result.value || ""));
+}
+
+async function detectDocxFont(arrayBuffer) {
+  if (!window.JSZip) return "";
+  try {
+    const zip = await window.JSZip.loadAsync(arrayBuffer);
+    const files = ["word/document.xml", "word/styles.xml"];
+    const counts = new Map();
+    for (const path of files) {
+      const file = zip.file(path);
+      if (!file) continue;
+      const xmlText = await file.async("text");
+      const xml = new DOMParser().parseFromString(xmlText, "application/xml");
+      Array.from(xml.getElementsByTagName("w:rFonts")).forEach((node) => {
+        ["w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"].forEach((attr) => {
+          const value = node.getAttribute(attr);
+          if (!value || /^\+/.test(value)) return;
+          counts.set(value, (counts.get(value) || 0) + 1);
+        });
+      });
+    }
+    const preferred = Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([font]) => font)
+      .find((font) => /mlw|karthika|kartika|rachana|anjali|malayalam|meera|nirmala/i.test(font));
+    return preferred || Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+  } catch {
+    return "";
+  }
 }
 
 function stripRtf(value) {
@@ -1148,9 +1194,11 @@ function getEditedExportHtml() {
 }
 
 function getExportStyles() {
-  const exportFont = malayalamFontMode === "mlw"
-    ? '"MLW-TTKarthika","Karthika","Kartika","Nirmala UI",serif'
-    : '"Nirmala UI","Karthika","Kartika","Rachana","AnjaliOldLipi",serif';
+  const exportFont = malayalamFontMode === "document" && detectedDocumentFont
+    ? `"${detectedDocumentFont}","MLW-TTKarthika","Karthika","Kartika","Nirmala UI",serif`
+    : malayalamFontMode === "mlw"
+      ? '"MLW-TTKarthika","Karthika","Kartika","Nirmala UI",serif'
+      : '"Nirmala UI","Karthika","Kartika","Rachana","AnjaliOldLipi",serif';
   return `
     body{font-family:${exportFont};font-size:14pt;line-height:1.35;color:#17211c}
     p{margin:0 0 10px;white-space:pre-wrap}
