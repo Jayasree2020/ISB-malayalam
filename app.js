@@ -251,14 +251,11 @@ function splitTextIntoPages(text) {
 }
 
 function cleanImportedLine(line) {
-  const indent = line.match(/^\s*/)?.[0] || "";
-  const limitedIndent = indent.length > 8 ? "        " : indent;
-  return `${limitedIndent}${line.slice(indent.length)
-    .replace(/[ \t\u00a0]+/g, " ")
-    .replace(/\s+([,.;:!?])/g, "$1")
-    .replace(/([([{])\s+/g, "$1")
-    .replace(/\s+([)\]}])/g, "$1")
-    .trimEnd()}`;
+  return line
+    .replace(/\u00a0/g, " ")
+    .replace(/\t/g, "    ")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+    .replace(/[ \t]+$/g, "");
 }
 
 function cleanImportedWordText(text) {
@@ -268,8 +265,8 @@ function cleanImportedWordText(text) {
     .split("\n")
     .map(cleanImportedLine)
     .join("\n")
-    .replace(/\n{4,}/g, "\n\n\n")
-    .trim();
+    .replace(/\n{5,}/g, "\n\n\n\n")
+    .trimEnd();
 }
 
 async function extractPdfPages(file) {
@@ -361,20 +358,16 @@ function stripRtf(value) {
     .replace(/\\u(-?\d+)\??/g, (match, code) => String.fromCharCode(Number(code)))
     .replace(/[{}]/g, "")
     .replace(/\\[a-zA-Z]+-?\d* ?/g, "")
-    .replace(/\s+\n/g, "\n")
-    .replace(/\n\s+/g, "\n")
-    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
     .trim();
 }
 
 function cleanLegacyDocText(value) {
   return value
     .replace(/<[^>]+>/g, " ")
-    .replace(/[^\S\r\n]+/g, " ")
     .replace(/[^\u0009\u000A\u000D\u0020-\u007E\u00A0-\uFFFF]/g, " ")
-    .replace(/[ \t]{2,}/g, " ")
     .replace(/\n{3,}/g, "\n\n")
-    .trim();
+    .trimEnd();
 }
 
 function extractPrintableRuns(text) {
