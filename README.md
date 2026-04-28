@@ -26,6 +26,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 - Displays Malayalam editing text with `MLW-TTKarthika` first in the font stack.
 - Keeps normal Western numerals and preserves English abbreviations when Malayalam text is pasted into layout blocks.
 - Preserves imported Word spacing, line breaks, indentation, and tabs as closely as possible in the editing window.
+- Filters binary Word import junk such as repeated `ÿÿÿ` characters and asks for DOCX/PDF when an old `.doc` cannot be read reliably.
 - Adds a visible draggable divider so the Malayalam editing window can be expanded widthwise.
 - Imports or pastes images, maps, and pictures, then shows them in the viewing/print preview.
 - Places licensed BSI Malayalam verse text at the top and translated notes below.
