@@ -18,6 +18,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 - Extracts text from uploaded PDF, DOCX, RTF, text, and many legacy DOC files page by page in the browser.
 - Shows the original English source beside the editable Malayalam translation.
 - Keeps PDF files visible as PDFs, so the English page can be viewed as it is while Malayalam is edited.
+- Can copy the current English PDF page structure into an editable Malayalam page-layout editor.
 - Imports or pastes images, maps, and pictures, then shows them in the viewing/print preview.
 - Places licensed BSI Malayalam verse text at the top and translated notes below.
 - Inserts verse markers, reference markers, symbols, Malayalam characters, and glossary terms.
@@ -39,16 +40,18 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 3. Upload the Malayalam PDF/DOC/DOCX/RTF/text file in the Malayalam file box, or paste/type Malayalam directly.
 4. The Malayalam page appears on the right in an editable Malayalam-font box.
 5. Edit the Malayalam box directly; edits are kept page by page while you navigate.
-6. Use `Previous`, `Next`, or the page number field to move through both documents together.
-7. Upload an image/map/picture in the Images area, or paste an image with `Ctrl+V`.
-8. The editor inserts an image marker; the viewing/print preview shows the actual image.
-9. Paste licensed BSI Malayalam Bible text in the BSI box.
-10. Click `Place at Top`.
-11. Use `Compose` to add verse numbers, references, symbols, glossary words, translation suggestions, and notes.
-12. Use `Normalize Text` to clean references and number style.
-13. Use `Run Checks` before export.
-14. Export Word/HTML/JSON and print to PDF.
-15. For final print layout, place the exported HTML in InDesign, or ask for ICML export once paragraph/character style names are finalized.
+6. Click `Copy Source Layout` when you want the Malayalam side to follow the current English page format.
+7. Use `Page Layout` mode to edit Malayalam in positioned blocks that follow the English page spacing, columns, and table-like line positions.
+8. Use `Previous`, `Next`, or the page number field to move through both documents together.
+9. Upload an image/map/picture in the Images area, or paste an image with `Ctrl+V`.
+10. The editor inserts an image marker; the viewing/print preview shows the actual image.
+11. Paste licensed BSI Malayalam Bible text in the BSI box.
+12. Click `Place at Top`.
+13. Use `Compose` to add verse numbers, references, symbols, glossary words, translation suggestions, and notes.
+14. Use `Normalize Text` to clean references and number style.
+15. Use `Run Checks` before export.
+16. Export Word/HTML/JSON and print to PDF.
+17. For final print layout, place the exported HTML in InDesign, or ask for ICML export once paragraph/character style names are finalized.
 
 ## Project Structure
 
@@ -163,6 +166,7 @@ Current export gives you Word-compatible `.doc`, browser PDF, HTML, and JSON. Fo
 
 - OCR for scanned PDFs that do not contain selectable text.
 - Server-side conversion for old binary `.doc` files that cannot be extracted cleanly in the browser.
+- Deeper table/image reconstruction from PDFs. Current layout mode preserves text-block positions from selectable PDF text.
 - Real `.docx` export with Word styles.
 - Dedicated image library using Vercel Blob for very large print assets.
 - ICML export after InDesign style names are chosen.
