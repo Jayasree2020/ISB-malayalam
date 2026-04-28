@@ -56,6 +56,7 @@ let undoStack = [];
 let redoStack = [];
 let suppressHistory = false;
 let malayalamZoom = Number(localStorage.getItem("mlTranslationWorkbench:malayalamZoom") || 100);
+let malayalamFontMode = localStorage.getItem("mlTranslationWorkbench:malayalamFontMode") || "unicode";
 let autoSaveTimer = null;
 
 if (window.pdfjsLib) {
@@ -82,6 +83,16 @@ function applyMalayalamZoom(value) {
   localStorage.setItem("mlTranslationWorkbench:malayalamZoom", String(malayalamZoom));
   renderMalayalamLayout();
   toast(`Malayalam zoom ${malayalamZoom}%`);
+}
+
+function applyMalayalamFontMode(mode = malayalamFontMode) {
+  malayalamFontMode = mode === "mlw" ? "mlw" : "unicode";
+  const fontStack = malayalamFontMode === "mlw"
+    ? '"MLW-TTKarthika", "Karthika", "Kartika", "Nirmala UI", serif'
+    : '"Nirmala UI", "Karthika", "Kartika", "Rachana", "AnjaliOldLipi", serif';
+  document.documentElement.style.setProperty("--malayalam-font-family", fontStack);
+  if ($("malayalamFontMode")) $("malayalamFontMode").value = malayalamFontMode;
+  localStorage.setItem("mlTranslationWorkbench:malayalamFontMode", malayalamFontMode);
 }
 
 function snapshot() {
@@ -293,8 +304,21 @@ function cleanImportedLine(line) {
     .replace(/[ \t]+$/g, "");
 }
 
+function repairMalayalamMojibake(value) {
+  if (!/[àÂÃ][\u0080-\u00ff]|à´|àµ|Â/.test(value)) return value;
+  try {
+    const bytes = Uint8Array.from(Array.from(value, (char) => char.charCodeAt(0) & 0xff));
+    const decoded = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    const originalMalayalam = (value.match(/[\u0D00-\u0D7F]/g) || []).length;
+    const decodedMalayalam = (decoded.match(/[\u0D00-\u0D7F]/g) || []).length;
+    return decodedMalayalam > originalMalayalam ? decoded : value;
+  } catch {
+    return value;
+  }
+}
+
 function cleanImportedWordText(text) {
-  return text
+  return repairMalayalamMojibake(text)
     .replace(/\r\n?/g, "\n")
     .replace(/\u00a0/g, " ")
     .replace(/[ÿþ�]{2,}/g, "")
@@ -794,7 +818,7 @@ function toWesternDigits(value) {
 }
 
 function cleanMalayalamPaste(value) {
-  return toWesternDigits(value).replace(/\u200c|\u200d/g, "");
+  return toWesternDigits(repairMalayalamMojibake(value)).replace(/\u200c|\u200d/g, "");
 }
 
 function normalizeReferences(text) {
@@ -1098,8 +1122,11 @@ function getEditedExportHtml() {
 }
 
 function getExportStyles() {
+  const exportFont = malayalamFontMode === "mlw"
+    ? '"MLW-TTKarthika","Karthika","Kartika","Nirmala UI",serif'
+    : '"Nirmala UI","Karthika","Kartika","Rachana","AnjaliOldLipi",serif';
   return `
-    body{font-family:"MLW-TTKarthika","Karthika","Kartika","Nirmala UI",serif;font-size:14pt;line-height:1.35;color:#17211c}
+    body{font-family:${exportFont};font-size:14pt;line-height:1.35;color:#17211c}
     p{margin:0 0 10px;white-space:pre-wrap}
     .verse-number{font-weight:bold;color:#a73f2b}
     .reference{font-style:italic}
@@ -1237,6 +1264,7 @@ function bindEvents() {
   $("lookupGlossaryBtn").addEventListener("click", lookupGlossaryMeaning);
   $("googleInputToolsBtn").addEventListener("click", openGoogleInputTools);
   $("googleTranslateBtn").addEventListener("click", openGoogleTranslateMalayalam);
+  $("malayalamFontMode").addEventListener("change", (event) => applyMalayalamFontMode(event.target.value));
   $("normalizeBtn").addEventListener("click", () => {
     saveEditHistory();
     $("finalText").value = normalizeReferences($("finalText").value);
@@ -1317,6 +1345,7 @@ function buildMalayalamKeyboard() {
 
 buildMalayalamKeyboard();
 bindEvents();
+applyMalayalamFontMode(malayalamFontMode);
 applyMalayalamZoom(malayalamZoom);
 updatePageStatus();
 renderImageGallery();
