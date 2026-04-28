@@ -40,7 +40,16 @@ const mlDigits = ["൦", "൧", "൨", "൩", "൪", "൫", "൬", "൭", "൮",
 const mlKeys = ["അ", "ആ", "ഇ", "ഈ", "ഉ", "ഊ", "എ", "ഏ", "ഐ", "ഒ", "ഓ", "ഔ", "ക", "ഖ", "ഗ", "ച", "ജ", "ട", "ഡ", "ണ", "ത", "ദ", "ന", "പ", "ബ", "മ", "യ", "ര", "ല", "വ", "ശ", "ഷ", "സ", "ഹ", "ള", "ഴ", "റ", "്", "ം", "ഃ"];
 
 let importedText = "";
+let importedPages = [];
+let importedFileName = "";
+let englishPages = [];
+let malayalamPages = [];
+let currentPage = 1;
 let localDbPromise;
+
+if (window.pdfjsLib) {
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
 
 function toast(message) {
   const box = $("toast");
@@ -50,7 +59,12 @@ function toast(message) {
 }
 
 function snapshot() {
-  return Object.fromEntries(stateKeys.map((key) => [key, $(key)?.value ?? ""]));
+  return {
+    ...Object.fromEntries(stateKeys.map((key) => [key, $(key)?.value ?? ""])),
+    englishPages,
+    malayalamPages,
+    currentPage
+  };
 }
 
 function localProjectId(data) {
@@ -82,6 +96,10 @@ function restore(data) {
   stateKeys.forEach((key) => {
     if ($(key) && data[key] !== undefined) $(key).value = data[key];
   });
+  englishPages = Array.isArray(data.englishPages) ? data.englishPages : [];
+  malayalamPages = Array.isArray(data.malayalamPages) ? data.malayalamPages : [];
+  currentPage = Number(data.currentPage || 1);
+  showPage(currentPage);
   renderPreview();
 }
 
@@ -139,6 +157,84 @@ function download(filename, content, type) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function splitTextIntoPages(text) {
+  const byFormFeed = text.split(/\f+/).map((page) => page.trim()).filter(Boolean);
+  if (byFormFeed.length > 1) return byFormFeed;
+
+  const byPageLabel = text.split(/\n\s*(?:page|p)\.?\s+\d+\s*\n/gi).map((page) => page.trim()).filter(Boolean);
+  return byPageLabel.length > 1 ? byPageLabel : [text.trim()];
+}
+
+async function extractPdfPages(file) {
+  if (!window.pdfjsLib) {
+    throw new Error("PDF reader is still loading. Please try again in a moment.");
+  }
+
+  const buffer = await file.arrayBuffer();
+  const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+  const pages = [];
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const textContent = await page.getTextContent();
+    let lastY = null;
+    const lines = [];
+    let line = "";
+
+    textContent.items.forEach((item) => {
+      const y = Math.round(item.transform[5]);
+      if (lastY !== null && Math.abs(y - lastY) > 4) {
+        lines.push(line.trim());
+        line = "";
+      }
+      line += `${item.str} `;
+      lastY = y;
+    });
+
+    if (line.trim()) lines.push(line.trim());
+    pages.push(lines.filter(Boolean).join("\n"));
+  }
+
+  return pages;
+}
+
+function updatePageStatus() {
+  const total = Math.max(englishPages.length, malayalamPages.length, 1);
+  $("pageNumber").max = String(total);
+  $("pageNumber").value = String(currentPage);
+  $("pageStatus").textContent = `Page ${currentPage} of ${total}. English pages: ${englishPages.length || 0}. Malayalam pages: ${malayalamPages.length || 0}.`;
+}
+
+function showPage(pageNumber) {
+  const total = Math.max(englishPages.length, malayalamPages.length, 1);
+  currentPage = Math.min(Math.max(Number(pageNumber) || 1, 1), total);
+
+  if (englishPages.length) $("englishText").value = englishPages[currentPage - 1] || "";
+  if (malayalamPages.length) $("malayalamText").value = malayalamPages[currentPage - 1] || "";
+
+  updatePageStatus();
+  renderPreview();
+}
+
+function useImportedPages(target) {
+  if (!importedPages.length) {
+    toast("Upload a PDF or text file first.");
+    return;
+  }
+
+  if (target === "english") {
+    englishPages = importedPages.slice();
+    $("englishText").value = englishPages[currentPage - 1] || englishPages[0] || "";
+    toast(`English PDF/text loaded: ${englishPages.length} page(s).`);
+  } else {
+    malayalamPages = importedPages.slice();
+    $("malayalamText").value = malayalamPages[currentPage - 1] || malayalamPages[0] || "";
+    toast(`Malayalam translation loaded: ${malayalamPages.length} page(s).`);
+  }
+
+  showPage(currentPage);
 }
 
 function escapeHtml(value) {
@@ -326,23 +422,48 @@ function bindEvents() {
   $("fileInput").addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-    if (!/\.(txt|md|html)$/i.test(file.name)) {
+
+    importedFileName = file.name;
+    $("importStatus").textContent = `Reading ${file.name}...`;
+
+    try {
+      if (/\.pdf$/i.test(file.name)) {
+        importedPages = await extractPdfPages(file);
+        importedText = importedPages.join("\n\n--- PAGE BREAK ---\n\n");
+        $("importStatus").textContent = `${file.name}: extracted ${importedPages.length} page(s). Choose English or Malayalam.`;
+        toast("PDF text extracted.");
+        return;
+      }
+
+      if (/\.(txt|md|html)$/i.test(file.name)) {
+        importedText = await file.text();
+        importedPages = splitTextIntoPages(importedText);
+        $("importStatus").textContent = `${file.name}: loaded ${importedPages.length} text page(s). Choose English or Malayalam.`;
+        toast("Text file imported.");
+        return;
+      }
+
       importedText = "";
-      toast("For PDF/Word in this starter, paste extracted text into the editor.");
-      return;
+      importedPages = [];
+      $("importStatus").textContent = "Word files need the next import module. For now, save as PDF or paste text.";
+      toast("Please upload PDF or text for page extraction.");
+    } catch (error) {
+      importedText = "";
+      importedPages = [];
+      $("importStatus").textContent = `Could not read ${file.name}: ${error.message}`;
+      toast("Import failed.");
     }
-    importedText = await file.text();
-    toast("Text file imported. Choose where to place it.");
   });
 
   $("useAsEnglishBtn").addEventListener("click", () => {
-    $("englishText").value = importedText || $("englishText").value;
-    renderPreview();
+    useImportedPages("english");
   });
   $("useAsMalayalamBtn").addEventListener("click", () => {
-    $("malayalamText").value = importedText || $("malayalamText").value;
-    renderPreview();
+    useImportedPages("malayalam");
   });
+  $("prevPageBtn").addEventListener("click", () => showPage(currentPage - 1));
+  $("nextPageBtn").addEventListener("click", () => showPage(currentPage + 1));
+  $("pageNumber").addEventListener("change", () => showPage($("pageNumber").value));
 
   $("saveLocalBtn").addEventListener("click", saveLocal);
   $("loadLocalBtn").addEventListener("click", loadLocal);
@@ -392,4 +513,5 @@ function buildMalayalamKeyboard() {
 
 buildMalayalamKeyboard();
 bindEvents();
+updatePageStatus();
 renderPreview();
