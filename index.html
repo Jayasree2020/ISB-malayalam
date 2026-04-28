@@ -39,12 +39,15 @@
 
         <section>
           <h2>Import</h2>
-          <input id="fileInput" type="file" accept=".txt,.md,.html,.pdf,.doc,.docx" />
-          <div class="button-row">
-            <button id="useAsEnglishBtn" type="button">Use as English</button>
-            <button id="useAsMalayalamBtn" type="button">Use as Malayalam</button>
-          </div>
-          <p id="importStatus" class="hint">Upload an English PDF, then click Use as English. Upload the Malayalam translation PDF or text, then click Use as Malayalam.</p>
+          <label>
+            English PDF / DOCX / text
+            <input id="englishFileInput" type="file" accept=".txt,.md,.html,.pdf,.docx" />
+          </label>
+          <label>
+            Malayalam PDF / DOCX / text
+            <input id="malayalamFileInput" type="file" accept=".txt,.md,.html,.pdf,.docx" />
+          </label>
+          <p id="importStatus" class="hint">Upload the English file and Malayalam file separately. The same page number will appear in both editor boxes.</p>
         </section>
 
         <section>
@@ -178,6 +181,7 @@ salvation=രക്ഷ</textarea>
 
     <div id="toast" role="status" aria-live="polite"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
