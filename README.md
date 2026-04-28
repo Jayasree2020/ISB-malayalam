@@ -15,8 +15,8 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 ## What The Workspace Does Now
 
 - Stores project title, section reference, editor name, English source, Malayalam translation, BSI verse text, final print body, glossary, and editor notes.
-- Extracts text from uploaded PDFs page by page in the browser.
-- Shows the English PDF page and the matching Malayalam translation page side by side.
+- Extracts text from uploaded PDF and DOCX files page by page in the browser.
+- Shows the English page and the matching Malayalam page side by side in editable boxes.
 - Places licensed BSI Malayalam verse text at the top and translated notes below.
 - Inserts verse markers, reference markers, symbols, Malayalam characters, and glossary terms.
 - Normalizes common book abbreviations and reference spacing.
@@ -32,10 +32,10 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 
 ## Suggested Editorial Workflow
 
-1. Upload the English PDF source.
-2. Click `Use as English`; the current PDF page appears in the English box.
-3. Upload the Malayalam translation PDF or text.
-4. Click `Use as Malayalam`; the matching page appears in the Malayalam-font box.
+1. Upload the English PDF/DOCX/text file in the English file box.
+2. Upload the Malayalam PDF/DOCX/text file in the Malayalam file box.
+3. The current English page appears in the English editor, and the matching Malayalam page appears in the Malayalam-font editor.
+4. Edit either box directly; edits are kept page by page while you navigate.
 5. Use `Previous`, `Next`, or the page number field to move through both documents together.
 6. Paste licensed BSI Malayalam Bible text in the BSI box.
 7. Click `Place at Top`.
@@ -156,8 +156,8 @@ Current export gives you Word-compatible `.doc`, browser PDF, HTML, and JSON. Fo
 
 ## Recommended Next Features
 
-- Real PDF extraction using server-side parsing.
-- Real `.docx` import/export with Word styles.
+- OCR for scanned PDFs that do not contain selectable text.
+- Real `.docx` export with Word styles.
 - ICML export after InDesign style names are chosen.
 - User accounts and project permissions.
 - Chapter/section dashboard for thousands of pages.
