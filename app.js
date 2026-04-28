@@ -37,6 +37,7 @@ const bookMap = {
 };
 
 const mlDigits = ["൦", "൧", "൨", "൩", "൪", "൫", "൬", "൭", "൮", "൯"];
+const mlDigitMap = Object.fromEntries(mlDigits.map((digit, index) => [digit, String(index)]));
 const mlKeys = ["അ", "ആ", "ഇ", "ഈ", "ഉ", "ഊ", "എ", "ഏ", "ഐ", "ഒ", "ഓ", "ഔ", "ക", "ഖ", "ഗ", "ച", "ജ", "ട", "ഡ", "ണ", "ത", "ദ", "ന", "പ", "ബ", "മ", "യ", "ര", "ല", "വ", "ശ", "ഷ", "സ", "ഹ", "ള", "ഴ", "റ", "്", "ം", "ഃ"];
 
 let englishPages = [];
@@ -562,6 +563,13 @@ function renderMalayalamLayout() {
   editor.innerHTML = `<div class="layout-page" style="width:${width}px;height:${height}px;">${lines}</div>`;
   editor.querySelectorAll(".layout-block, .layout-table").forEach((block) => {
     block.addEventListener("input", persistCurrentPageEdits);
+    block.addEventListener("paste", (event) => {
+      const text = event.clipboardData?.getData("text/plain");
+      if (!text) return;
+      event.preventDefault();
+      insertPlainTextAtSelection(text);
+      persistCurrentPageEdits();
+    });
   });
 }
 
@@ -589,6 +597,14 @@ function toMalayalamDigits(value) {
   return value.replace(/\d/g, (digit) => mlDigits[Number(digit)]);
 }
 
+function toWesternDigits(value) {
+  return value.replace(/[൦-൯]/g, (digit) => mlDigitMap[digit] || digit);
+}
+
+function cleanMalayalamPaste(value) {
+  return toWesternDigits(value).replace(/\u200c|\u200d/g, "");
+}
+
 function normalizeReferences(text) {
   let output = text
     .split(/\r?\n/)
@@ -612,12 +628,21 @@ function selectedTextarea() {
 
 function insertText(value) {
   const area = selectedTextarea();
+  const cleanValue = area.id === "malayalamText" || area.lang === "ml" ? cleanMalayalamPaste(value) : value;
   const start = area.selectionStart;
   const end = area.selectionEnd;
-  area.value = area.value.slice(0, start) + value + area.value.slice(end);
+  area.value = area.value.slice(0, start) + cleanValue + area.value.slice(end);
   area.focus();
-  area.selectionStart = area.selectionEnd = start + value.length;
+  area.selectionStart = area.selectionEnd = start + cleanValue.length;
   renderPreview();
+}
+
+function insertPlainTextAtSelection(text) {
+  const selection = window.getSelection();
+  if (!selection || !selection.rangeCount) return;
+  selection.deleteFromDocument();
+  selection.getRangeAt(0).insertNode(document.createTextNode(cleanMalayalamPaste(text)));
+  selection.collapseToEnd();
 }
 
 function fileToDataUrl(file) {
@@ -932,8 +957,22 @@ function bindEvents() {
     renderPreview();
   });
   $("malayalamText").addEventListener("input", () => {
+    const start = $("malayalamText").selectionStart;
+    const end = $("malayalamText").selectionEnd;
+    const cleaned = cleanMalayalamPaste($("malayalamText").value);
+    if (cleaned !== $("malayalamText").value) {
+      $("malayalamText").value = cleaned;
+      $("malayalamText").selectionStart = start;
+      $("malayalamText").selectionEnd = end;
+    }
     persistCurrentPageEdits();
     renderPreview();
+  });
+  $("malayalamText").addEventListener("paste", (event) => {
+    const text = event.clipboardData?.getData("text/plain");
+    if (!text) return;
+    event.preventDefault();
+    insertText(text);
   });
   stateKeys
     .filter((key) => key !== "englishText" && key !== "malayalamText")
