@@ -81,7 +81,7 @@ textarea {
 }
 
 textarea[lang="ml"] {
-  font-family: "MLW-TTKarthika", "Karthika", "Kartika", "Nirmala UI", "Rachana", "AnjaliOldLipi", serif;
+  font-family: var(--malayalam-font-family, "Nirmala UI", "Karthika", "Kartika", "Rachana", "AnjaliOldLipi", serif);
 }
 
 .topbar {
@@ -293,6 +293,13 @@ h2 {
   font-size: 12px;
 }
 
+.mode-buttons select {
+  min-height: 28px;
+  width: auto;
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
 .editor-block textarea {
   height: 100%;
   min-height: 380px;
@@ -334,7 +341,7 @@ h2 {
   border: 1px dashed transparent;
   color: var(--ink);
   background: rgba(255, 255, 255, 0.72);
-  font-family: "MLW-TTKarthika", "Karthika", "Kartika", "Nirmala UI", "Rachana", "AnjaliOldLipi", serif;
+  font-family: var(--malayalam-font-family, "Nirmala UI", "Karthika", "Kartika", "Rachana", "AnjaliOldLipi", serif);
   font-size: var(--malayalam-layout-font-size, 14px);
   line-height: 1.25;
   white-space: pre-wrap;
@@ -380,7 +387,7 @@ h2 {
 .layout-table table {
   width: 100%;
   border-collapse: collapse;
-  font-family: "MLW-TTKarthika", "Karthika", "Kartika", "Nirmala UI", "Rachana", "AnjaliOldLipi", serif;
+  font-family: var(--malayalam-font-family, "Nirmala UI", "Karthika", "Kartika", "Rachana", "AnjaliOldLipi", serif);
   font-size: var(--malayalam-table-font-size, 13px);
 }
 
@@ -508,7 +515,7 @@ h2 {
   background: white;
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
-  font-family: "MLW-TTKarthika", "Karthika", "Kartika", "Nirmala UI", serif;
+  font-family: var(--malayalam-font-family, "Nirmala UI", "Karthika", "Kartika", "Rachana", serif);
   font-size: 14pt;
   line-height: 1.7;
 }
