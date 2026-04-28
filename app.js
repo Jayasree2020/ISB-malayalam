@@ -261,6 +261,7 @@ function splitTextIntoPages(text) {
 function cleanImportedLine(line) {
   return line
     .replace(/\u00a0/g, " ")
+    .replace(/[ÿþ�]{2,}/g, "")
     .replace(/\t/g, "    ")
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
     .replace(/[ \t]+$/g, "");
@@ -270,11 +271,20 @@ function cleanImportedWordText(text) {
   return text
     .replace(/\r\n?/g, "\n")
     .replace(/\u00a0/g, " ")
+    .replace(/[ÿþ�]{2,}/g, "")
     .split("\n")
     .map(cleanImportedLine)
     .join("\n")
     .replace(/\n{5,}/g, "\n\n\n\n")
     .trimEnd();
+}
+
+function readableTextScore(text) {
+  const cleaned = text.replace(/\s/g, "");
+  if (!cleaned.length) return 0;
+  const readable = (cleaned.match(/[\p{L}\p{N}\u0D00-\u0D7F.,;:!?()[\]\-]/gu) || []).length;
+  const junk = (cleaned.match(/[ÿþ�]/g) || []).length;
+  return (readable - junk * 3) / cleaned.length;
 }
 
 async function extractPdfPages(file) {
@@ -404,7 +414,7 @@ async function extractLegacyDocPages(file) {
   const best = utf16Runs.length > ansiRuns.length ? utf16Runs : ansiRuns;
   const cleaned = cleanLegacyDocText(best);
 
-  if (cleaned.length < 40) {
+  if (cleaned.length < 40 || readableTextScore(cleaned) < 0.45) {
     throw new Error(`This looks like an old binary Word .doc file (${signature}). Please save it as .docx or PDF for reliable import.`);
   }
 
