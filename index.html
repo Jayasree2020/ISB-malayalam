@@ -41,11 +41,11 @@
           <h2>Import</h2>
           <label>
             English PDF / DOCX / text
-            <input id="englishFileInput" type="file" accept=".txt,.md,.html,.pdf,.docx" />
+            <input id="englishFileInput" type="file" accept=".txt,.md,.html,.pdf,.docx,image/*" />
           </label>
           <label>
             Malayalam PDF / DOCX / text
-            <input id="malayalamFileInput" type="file" accept=".txt,.md,.html,.pdf,.docx" />
+            <input id="malayalamFileInput" type="file" accept=".txt,.md,.html,.pdf,.docx,image/*" />
           </label>
           <p id="importStatus" class="hint">Upload the English file and Malayalam file separately. The same page number will appear in both editor boxes.</p>
         </section>
@@ -108,13 +108,22 @@ salvation=രക്ഷ</textarea>
 
         <div id="sourceView" class="view active">
           <div class="split">
+            <section class="viewer-block">
+              <div class="viewer-header">
+                <span>Original English Source</span>
+                <button id="toggleExtractedEnglishBtn" type="button">Extracted Text</button>
+              </div>
+              <div id="sourceViewer" class="source-viewer">
+                <p class="hint">Upload an English PDF, Word file, image, or text file to view it here.</p>
+              </div>
+              <label id="englishExtractedPanel" class="editor-block collapsed">
+                Extracted English Text
+                <textarea id="englishText" placeholder="Extracted English text appears here. You can also paste text manually."></textarea>
+              </label>
+            </section>
             <label class="editor-block">
-              English PDF Text
-              <textarea id="englishText" placeholder="Paste or import English PDF text here."></textarea>
-            </label>
-            <label class="editor-block">
-              Malayalam Translation
-              <textarea id="malayalamText" lang="ml" placeholder="Paste or type Malayalam translation here."></textarea>
+              Editable Malayalam Translation
+              <textarea id="malayalamText" lang="ml" placeholder="Upload Malayalam PDF/DOCX/text or type Malayalam translation here."></textarea>
             </label>
           </div>
         </div>
