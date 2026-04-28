@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Malayalam Translation Workbench</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Malayalam Translation Workbench</p>
+        <h1>Print editing desk</h1>
+      </div>
+      <div class="top-actions">
+        <button id="saveLocalBtn" type="button">Save</button>
+        <button id="loadLocalBtn" type="button">Load</button>
+        <button id="saveCloudBtn" type="button">Save to Cloud</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="panel import-panel">
+        <section>
+          <h2>Project</h2>
+          <label>
+            Title
+            <input id="projectTitle" type="text" value="Malayalam Translation Project" />
+          </label>
+          <label>
+            Section
+            <input id="sectionRef" type="text" placeholder="Example: Matthew 5:1-12" />
+          </label>
+          <label>
+            Editor
+            <input id="editorName" type="text" placeholder="Name" />
+          </label>
+        </section>
+
+        <section>
+          <h2>Import</h2>
+          <input id="fileInput" type="file" accept=".txt,.md,.html,.pdf,.doc,.docx" />
+          <div class="button-row">
+            <button id="useAsEnglishBtn" type="button">Use as English</button>
+            <button id="useAsMalayalamBtn" type="button">Use as Malayalam</button>
+          </div>
+          <p class="hint">PDF and Word upload support can be expanded on Vercel. This starter reads plain text directly; paste extracted PDF/Word text below when needed.</p>
+        </section>
+
+        <section>
+          <h2>BSI Verse Text</h2>
+          <label>
+            Licensed Malayalam Bible text
+            <textarea id="bsiText" rows="8" placeholder="Paste licensed Bible Society of India Malayalam verse text here."></textarea>
+          </label>
+          <button id="insertBsiBtn" type="button">Place at Top</button>
+          <p class="hint">Do not publish or distribute BSI text unless your project has permission/license.</p>
+        </section>
+
+        <section>
+          <h2>Glossary</h2>
+          <label>
+            Terms
+            <textarea id="glossaryInput" rows="8">grace=കൃപ
+faith=വിശ്വാസം
+kingdom=രാജ്യം
+righteousness=നീതി
+disciple=ശിഷ്യൻ
+salvation=രക്ഷ</textarea>
+          </label>
+          <button id="applyGlossaryBtn" type="button">Suggest Words</button>
+        </section>
+      </aside>
+
+      <section class="editor-shell">
+        <nav class="tabs" aria-label="Editor views">
+          <button class="tab active" data-view="source" type="button">Source</button>
+          <button class="tab" data-view="compose" type="button">Compose</button>
+          <button class="tab" data-view="preview" type="button">Print Preview</button>
+        </nav>
+
+        <div id="sourceView" class="view active">
+          <div class="split">
+            <label class="editor-block">
+              English PDF Text
+              <textarea id="englishText" placeholder="Paste or import English PDF text here."></textarea>
+            </label>
+            <label class="editor-block">
+              Malayalam Translation
+              <textarea id="malayalamText" lang="ml" placeholder="Paste or type Malayalam translation here."></textarea>
+            </label>
+          </div>
+        </div>
+
+        <div id="composeView" class="view">
+          <div class="toolstrip">
+            <button data-wrap="verse" type="button">Verse No.</button>
+            <button data-wrap="ref" type="button">Reference</button>
+            <button data-insert="†" type="button">†</button>
+            <button data-insert="‡" type="button">‡</button>
+            <button data-insert="§" type="button">§</button>
+            <button data-insert="—" type="button">Dash</button>
+            <button id="cleanRefsBtn" type="button">Clean Refs</button>
+            <button id="splitVersesBtn" type="button">Split Verses</button>
+            <button id="translateSelectionBtn" type="button">Translate Selection</button>
+          </div>
+
+          <div class="compose-grid">
+            <label class="editor-block main-editor">
+              Final Print Body
+              <textarea id="finalText" lang="ml" placeholder="Build final text here: BSI verse text at top, translated notes below."></textarea>
+            </label>
+            <aside class="assistant-panel">
+              <h2>Malayalam Typing</h2>
+              <div id="malayalamKeys" class="key-grid"></div>
+              <h2>Suggestions</h2>
+              <div id="suggestions" class="suggestions"></div>
+              <h2>Notes</h2>
+              <textarea id="editorNotes" rows="9" placeholder="Editorial notes, questions, page decisions."></textarea>
+            </aside>
+          </div>
+        </div>
+
+        <div id="previewView" class="view">
+          <article id="printPreview" class="print-page"></article>
+        </div>
+      </section>
+
+      <aside class="panel export-panel">
+        <section>
+          <h2>Reference Format</h2>
+          <label>
+            Book abbreviations
+            <select id="bookStyle">
+              <option value="malayalam">Malayalam</option>
+              <option value="english">English</option>
+            </select>
+          </label>
+          <label>
+            Verse number style
+            <select id="numberStyle">
+              <option value="western">1, 2, 3</option>
+              <option value="malayalam">൧, ൨, ൩</option>
+            </select>
+          </label>
+          <button id="normalizeBtn" type="button">Normalize Text</button>
+        </section>
+
+        <section>
+          <h2>Export</h2>
+          <button id="exportDocBtn" type="button">Word .doc</button>
+          <button id="exportHtmlBtn" type="button">InDesign HTML</button>
+          <button id="exportJsonBtn" type="button">Archive JSON</button>
+          <button id="printPdfBtn" type="button">Print / PDF</button>
+          <p class="hint">For InDesign, export HTML now. ICML export can be added after final style names are fixed.</p>
+        </section>
+
+        <section>
+          <h2>Checks</h2>
+          <button id="runChecksBtn" type="button">Run Checks</button>
+          <ul id="checkList" class="check-list"></ul>
+        </section>
+      </aside>
+    </main>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
