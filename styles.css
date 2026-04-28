@@ -246,10 +246,80 @@ h2 {
   height: 100%;
 }
 
+.editor-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.mode-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.mode-buttons button {
+  min-height: 28px;
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
 .editor-block textarea {
   height: 100%;
   min-height: 360px;
   font-size: 16px;
+}
+
+.layout-editor {
+  position: relative;
+  width: 100%;
+  min-height: 640px;
+  height: 100%;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f3f1ea;
+  padding: 12px;
+}
+
+.layout-editor.hidden,
+.editor-block textarea.hidden {
+  display: none;
+}
+
+.layout-page {
+  position: relative;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.layout-line {
+  position: absolute;
+  min-height: 18px;
+  padding: 1px 3px;
+  border: 1px dashed transparent;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.72);
+  font-family: "Nirmala UI", "Kartika", "Rachana", "AnjaliOldLipi", serif;
+  font-size: 14px;
+  line-height: 1.25;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.layout-line:hover,
+.layout-line:focus {
+  border-color: var(--accent);
+  background: #fff;
+  outline: none;
+}
+
+.layout-empty {
+  padding: 14px;
+  color: var(--muted);
 }
 
 .compose-grid {
