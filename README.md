@@ -17,6 +17,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 - Stores project title, section reference, editor name, English source, Malayalam translation, BSI verse text, final print body, glossary, and editor notes.
 - Extracts text from uploaded PDF and DOCX files page by page in the browser.
 - Shows the English page and the matching Malayalam page side by side in editable boxes.
+- Imports or pastes images, maps, and pictures, then shows them in the viewing/print preview.
 - Places licensed BSI Malayalam verse text at the top and translated notes below.
 - Inserts verse markers, reference markers, symbols, Malayalam characters, and glossary terms.
 - Normalizes common book abbreviations and reference spacing.
@@ -37,13 +38,15 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 3. The current English page appears in the English editor, and the matching Malayalam page appears in the Malayalam-font editor.
 4. Edit either box directly; edits are kept page by page while you navigate.
 5. Use `Previous`, `Next`, or the page number field to move through both documents together.
-6. Paste licensed BSI Malayalam Bible text in the BSI box.
-7. Click `Place at Top`.
-8. Use `Compose` to add verse numbers, references, symbols, glossary words, translation suggestions, and notes.
-9. Use `Normalize Text` to clean references and number style.
-10. Use `Run Checks` before export.
-11. Export Word/HTML/JSON and print to PDF.
-12. For final print layout, place the exported HTML in InDesign, or ask for ICML export once paragraph/character style names are finalized.
+6. Upload an image/map/picture in the Images area, or paste an image with `Ctrl+V`.
+7. The editor inserts an image marker; the viewing/print preview shows the actual image.
+8. Paste licensed BSI Malayalam Bible text in the BSI box.
+9. Click `Place at Top`.
+10. Use `Compose` to add verse numbers, references, symbols, glossary words, translation suggestions, and notes.
+11. Use `Normalize Text` to clean references and number style.
+12. Use `Run Checks` before export.
+13. Export Word/HTML/JSON and print to PDF.
+14. For final print layout, place the exported HTML in InDesign, or ask for ICML export once paragraph/character style names are finalized.
 
 ## Project Structure
 
@@ -158,6 +161,7 @@ Current export gives you Word-compatible `.doc`, browser PDF, HTML, and JSON. Fo
 
 - OCR for scanned PDFs that do not contain selectable text.
 - Real `.docx` export with Word styles.
+- Dedicated image library using Vercel Blob for very large print assets.
 - ICML export after InDesign style names are chosen.
 - User accounts and project permissions.
 - Chapter/section dashboard for thousands of pages.
