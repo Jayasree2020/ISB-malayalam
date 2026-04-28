@@ -5,7 +5,11 @@
   "description": "Editorial workspace for Malayalam Bible-note translation, review, and print export.",
   "scripts": {
     "dev": "vercel dev",
-    "start": "vercel dev"
+    "start": "vercel dev",
+    "check": "node --check app.js && node --check api/db.js && node --check api/save.js && node --check api/projects.js && node --check api/translate.js && node --check api/health.js"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "@google-cloud/translate": "^9.2.0",
