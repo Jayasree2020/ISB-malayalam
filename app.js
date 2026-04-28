@@ -250,6 +250,28 @@ function splitTextIntoPages(text) {
   return byPageLabel.length > 1 ? byPageLabel : [text.trim()];
 }
 
+function cleanImportedLine(line) {
+  const indent = line.match(/^\s*/)?.[0] || "";
+  const limitedIndent = indent.length > 8 ? "        " : indent;
+  return `${limitedIndent}${line.slice(indent.length)
+    .replace(/[ \t\u00a0]+/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/([([{])\s+/g, "$1")
+    .replace(/\s+([)\]}])/g, "$1")
+    .trimEnd()}`;
+}
+
+function cleanImportedWordText(text) {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .replace(/\u00a0/g, " ")
+    .split("\n")
+    .map(cleanImportedLine)
+    .join("\n")
+    .replace(/\n{4,}/g, "\n\n\n")
+    .trim();
+}
+
 async function extractPdfPages(file) {
   if (!window.pdfjsLib) {
     throw new Error("PDF reader is still loading. Please try again in a moment.");
@@ -329,7 +351,7 @@ async function extractDocxPages(file) {
 
   const arrayBuffer = await file.arrayBuffer();
   const result = await window.mammoth.extractRawText({ arrayBuffer });
-  return splitTextIntoPages(result.value || "");
+  return splitTextIntoPages(cleanImportedWordText(result.value || ""));
 }
 
 function stripRtf(value) {
@@ -371,9 +393,9 @@ async function extractLegacyDocPages(file) {
   const utf8 = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
   if (/<html|<!doctype html/i.test(utf8)) {
     const doc = new DOMParser().parseFromString(utf8, "text/html");
-    return splitTextIntoPages(cleanLegacyDocText(doc.body?.innerText || utf8));
+    return splitTextIntoPages(cleanImportedWordText(cleanLegacyDocText(doc.body?.innerText || utf8)));
   }
-  if (/^{\\rtf/i.test(utf8)) return splitTextIntoPages(stripRtf(utf8));
+  if (/^{\\rtf/i.test(utf8)) return splitTextIntoPages(cleanImportedWordText(stripRtf(utf8)));
 
   const utf16 = new TextDecoder("utf-16le", { fatal: false }).decode(bytes);
   const utf16Runs = extractPrintableRuns(utf16);
@@ -385,14 +407,14 @@ async function extractLegacyDocPages(file) {
     throw new Error(`This looks like an old binary Word .doc file (${signature}). Please save it as .docx or PDF for reliable import.`);
   }
 
-  return splitTextIntoPages(cleaned);
+  return splitTextIntoPages(cleanImportedWordText(cleaned));
 }
 
 async function extractFilePages(file) {
   if (/\.pdf$/i.test(file.name)) return extractPdfPages(file);
   if (/\.docx$/i.test(file.name)) return extractDocxPages(file);
   if (/\.doc$/i.test(file.name)) return extractLegacyDocPages(file);
-  if (/\.rtf$/i.test(file.name)) return splitTextIntoPages(stripRtf(await file.text()));
+  if (/\.rtf$/i.test(file.name)) return splitTextIntoPages(cleanImportedWordText(stripRtf(await file.text())));
   if (/\.(txt|md|html)$/i.test(file.name)) return splitTextIntoPages(await file.text());
   if (file.type.startsWith("image/")) return [""];
   throw new Error("Please upload PDF, DOC, DOCX, RTF, TXT, MD, HTML, or an image.");
@@ -497,7 +519,7 @@ async function importIntoTarget(file, target) {
   }
 
   if (target === "english") {
-    englishPages = pages.slice();
+    englishPages = pages.map(cleanImportedWordText);
     englishLayouts = Array.isArray(file._extractedLayouts) ? file._extractedLayouts : [];
     setSourceViewer(file, pages);
     $("englishText").value = englishPages[currentPage - 1] || englishPages[0] || "";
@@ -510,7 +532,7 @@ async function importIntoTarget(file, target) {
       toast("Malayalam image added. OCR is needed to make image text editable.");
       return;
     }
-    malayalamPages = pages.slice();
+    malayalamPages = pages.map(cleanImportedWordText);
     if (!malayalamLayouts.length) malayalamLayouts = [];
     $("malayalamText").value = malayalamPages[currentPage - 1] || malayalamPages[0] || "";
     $("importStatus").textContent = `Malayalam loaded from ${file.name}: ${malayalamPages.length} page(s).`;
