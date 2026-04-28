@@ -318,7 +318,8 @@ function splitTextIntoPages(text) {
 function cleanImportedLine(line) {
   return line
     .replace(/\u00a0/g, " ")
-    .replace(/[\u00ff\u00fe\ufffd]{2,}/g, "")
+    .replace(/[\u00ff\u00fe\ufffd\uffff\ufffe\ufdd0-\ufdef]{2,}/g, "")
+    .replace(/[\uffff\ufffe\ufdd0-\ufdef]/g, "")
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
     .replace(/[ \t]+$/g, "");
 }
@@ -340,7 +341,8 @@ function cleanImportedWordText(text) {
   return repairMalayalamMojibake(text)
     .replace(/\r\n?/g, "\n")
     .replace(/\u00a0/g, " ")
-    .replace(/[\u00ff\u00fe\ufffd]{2,}/g, "")
+    .replace(/[\u00ff\u00fe\ufffd\uffff\ufffe\ufdd0-\ufdef]{2,}/g, "")
+    .replace(/[\uffff\ufffe\ufdd0-\ufdef]/g, "")
     .split("\n")
     .map(cleanImportedLine)
     .join("\n")
@@ -352,8 +354,29 @@ function readableTextScore(text) {
   const cleaned = text.replace(/\s/g, "");
   if (!cleaned.length) return 0;
   const readable = (cleaned.match(/[\p{L}\p{N}\u0D00-\u0D7F.,;:!?()[\]\-]/gu) || []).length;
-  const junk = (cleaned.match(/[\u00ff\u00fe\ufffd]/g) || []).length;
+  const junk = (cleaned.match(/[\u00ff\u00fe\ufffd\uffff\ufffe\ufdd0-\ufdef]/g) || []).length;
   return (readable - junk * 3) / cleaned.length;
+}
+
+function visibleJunkRatio(text) {
+  const compact = text.replace(/\s/g, "");
+  if (!compact.length) return 0;
+  const allowed = compact.match(/[\u0D00-\u0D7F\p{Script=Latin}\p{N}\p{P}\p{S}]/gu) || [];
+  const hardJunk = compact.match(/[\uffff\ufffe\ufffd\ufdd0-\ufdef\uE000-\uF8FF]/g) || [];
+  return Math.max(1 - allowed.length / compact.length, hardJunk.length / compact.length);
+}
+
+function looksLikeBinaryText(text) {
+  const compact = text.replace(/\s/g, "");
+  if (compact.length < 40) return false;
+  return visibleJunkRatio(compact) > 0.2 || readableTextScore(compact) < 0.35;
+}
+
+function assertReadableImport(text, label = "file") {
+  if (looksLikeBinaryText(text)) {
+    throw new Error(`The ${label} contains binary or corrupted text. Please convert it to DOCX or PDF and upload again.`);
+  }
+  return text;
 }
 
 async function extractPdfPages(file) {
@@ -483,7 +506,8 @@ function stripRtf(value) {
 function cleanLegacyDocText(value) {
   return value
     .replace(/<[^>]+>/g, " ")
-    .replace(/[^\u0009\u000A\u000D\u0020-\u007E\u00A0-\uFFFF]/g, " ")
+    .replace(/[\uffff\ufffe\ufffd\ufdd0-\ufdef\uE000-\uF8FF]/g, " ")
+    .replace(/[^\u0009\u000A\u000D\u0020-\u007E\u00A0-\u024F\u0D00-\u0D7F]/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trimEnd();
 }
@@ -526,7 +550,7 @@ async function extractFilePages(file) {
   if (/\.docx$/i.test(file.name)) return extractDocxPages(file);
   if (/\.doc$/i.test(file.name)) return extractLegacyDocPages(file);
   if (/\.rtf$/i.test(file.name)) return splitTextIntoPages(cleanImportedWordText(stripRtf(await file.text())));
-  if (/\.(txt|md|html)$/i.test(file.name)) return splitTextIntoPages(await file.text());
+  if (/\.(txt|md|html)$/i.test(file.name)) return splitTextIntoPages(cleanImportedWordText(await file.text()));
   if (file.type.startsWith("image/")) return [""];
   throw new Error("Please upload PDF, DOC, DOCX, RTF, TXT, MD, HTML, or an image.");
 }
@@ -627,6 +651,10 @@ async function importIntoTarget(file, target) {
 
   if (!pages.length && !file.type.startsWith("image/")) {
     pages.push("");
+  }
+  const importedText = pages.join("\n");
+  if (!file.type.startsWith("image/")) {
+    assertReadableImport(importedText, file.name);
   }
 
   if (target === "english") {
@@ -788,10 +816,16 @@ function renderMalayalamLayout() {
     });
     block.addEventListener("input", persistCurrentPageEdits);
     block.addEventListener("paste", (event) => {
-      const text = event.clipboardData?.getData("text/plain");
-      if (!text) return;
+    const text = event.clipboardData?.getData("text/plain");
+    if (!text) return;
+      const cleaned = cleanMalayalamPaste(text);
+      if (!cleaned && text.trim()) {
+        event.preventDefault();
+        toast("That pasted text looks corrupted. Convert the source to DOCX/PDF and try again.");
+        return;
+      }
       event.preventDefault();
-      insertPlainTextAtSelection(text);
+      insertPlainTextAtSelection(cleaned);
       persistCurrentPageEdits();
     });
   });
@@ -868,7 +902,10 @@ function toWesternDigits(value) {
 }
 
 function cleanMalayalamPaste(value) {
-  return toWesternDigits(repairMalayalamMojibake(value)).replace(/\u200c|\u200d/g, "");
+  const cleaned = toWesternDigits(repairMalayalamMojibake(value))
+    .replace(/[\uffff\ufffe\ufffd\ufdd0-\ufdef\uE000-\uF8FF]/g, "")
+    .replace(/\u200c|\u200d/g, "");
+  return looksLikeBinaryText(cleaned) ? "" : cleaned;
 }
 
 function normalizeReferences(text) {
@@ -1391,9 +1428,15 @@ function bindEvents() {
   $("malayalamText").addEventListener("paste", (event) => {
     const text = event.clipboardData?.getData("text/plain");
     if (!text) return;
+    const cleaned = cleanMalayalamPaste(text);
+    if (!cleaned && text.trim()) {
+      event.preventDefault();
+      toast("That pasted text looks corrupted. Convert the source to DOCX/PDF and try again.");
+      return;
+    }
     saveEditHistory();
     event.preventDefault();
-    insertText(text);
+    insertText(cleaned);
   });
   $("finalText")?.addEventListener("focus", saveEditHistory);
   $("bsiText")?.addEventListener("focus", saveEditHistory);
