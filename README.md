@@ -15,6 +15,8 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 ## What The Workspace Does Now
 
 - Stores project title, section reference, editor name, English source, Malayalam translation, BSI verse text, final print body, glossary, and editor notes.
+- Extracts text from uploaded PDFs page by page in the browser.
+- Shows the English PDF page and the matching Malayalam translation page side by side.
 - Places licensed BSI Malayalam verse text at the top and translated notes below.
 - Inserts verse markers, reference markers, symbols, Malayalam characters, and glossary terms.
 - Normalizes common book abbreviations and reference spacing.
@@ -30,15 +32,18 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 
 ## Suggested Editorial Workflow
 
-1. Put the English PDF source in the left source pane. For now, paste extracted text or import `.txt`.
-2. Put the Malayalam translation in the right source pane.
-3. Paste licensed BSI Malayalam Bible text in the BSI box.
-4. Click `Place at Top`.
-5. Use `Compose` to add verse numbers, references, symbols, glossary words, translation suggestions, and notes.
-6. Use `Normalize Text` to clean references and number style.
-7. Use `Run Checks` before export.
-8. Export Word/HTML/JSON and print to PDF.
-9. For final print layout, place the exported HTML in InDesign, or ask for ICML export once paragraph/character style names are finalized.
+1. Upload the English PDF source.
+2. Click `Use as English`; the current PDF page appears in the English box.
+3. Upload the Malayalam translation PDF or text.
+4. Click `Use as Malayalam`; the matching page appears in the Malayalam-font box.
+5. Use `Previous`, `Next`, or the page number field to move through both documents together.
+6. Paste licensed BSI Malayalam Bible text in the BSI box.
+7. Click `Place at Top`.
+8. Use `Compose` to add verse numbers, references, symbols, glossary words, translation suggestions, and notes.
+9. Use `Normalize Text` to clean references and number style.
+10. Use `Run Checks` before export.
+11. Export Word/HTML/JSON and print to PDF.
+12. For final print layout, place the exported HTML in InDesign, or ask for ICML export once paragraph/character style names are finalized.
 
 ## Project Structure
 
@@ -46,6 +51,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 index.html          Main editing workspace
 styles.css          Print/editor styling
 app.js              Browser editor logic and export tools
+                  Includes PDF page extraction using PDF.js
 api/db.js           Lazy Neon Postgres connection and table setup
 api/save.js         Vercel API route for saving projects
 api/projects.js     Vercel API route for listing projects
