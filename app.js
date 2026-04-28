@@ -56,6 +56,7 @@ let undoStack = [];
 let redoStack = [];
 let suppressHistory = false;
 let splitSourceWidth = Number(localStorage.getItem("mlTranslationWorkbench:sourceWidth") || 50);
+let malayalamZoom = Number(localStorage.getItem("mlTranslationWorkbench:malayalamZoom") || 100);
 
 if (window.pdfjsLib) {
   window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -73,6 +74,21 @@ function applySplitWidth(value) {
   $("sourceSplit")?.style.setProperty("--source-width", `${splitSourceWidth}%`);
   localStorage.setItem("mlTranslationWorkbench:sourceWidth", String(splitSourceWidth));
   renderMalayalamLayout();
+}
+
+function applyMalayalamZoom(value) {
+  malayalamZoom = Math.min(Math.max(Number(value) || 100, 70), 180);
+  const textSize = 16 * (malayalamZoom / 100);
+  const layoutSize = 14 * (malayalamZoom / 100);
+  const tableSize = 13 * (malayalamZoom / 100);
+  $("malayalamText")?.style.setProperty("font-size", `${textSize}px`);
+  $("finalText")?.style.setProperty("font-size", `${textSize}px`);
+  $("malayalamLayoutEditor")?.style.setProperty("--malayalam-editor-font-size", `${textSize}px`);
+  $("malayalamLayoutEditor")?.style.setProperty("--malayalam-layout-font-size", `${layoutSize}px`);
+  $("malayalamLayoutEditor")?.style.setProperty("--malayalam-table-font-size", `${tableSize}px`);
+  localStorage.setItem("mlTranslationWorkbench:malayalamZoom", String(malayalamZoom));
+  renderMalayalamLayout();
+  toast(`Malayalam zoom ${malayalamZoom}%`);
 }
 
 function snapshot() {
@@ -1145,6 +1161,8 @@ function bindEvents() {
   $("editorOptionsBtn").addEventListener("click", () => {
     $("editorOptionsPanel").classList.toggle("hidden");
   });
+  $("zoomOutMalayalamBtn").addEventListener("click", () => applyMalayalamZoom(malayalamZoom - 10));
+  $("zoomInMalayalamBtn").addEventListener("click", () => applyMalayalamZoom(malayalamZoom + 10));
   const resizeHandle = $("splitResizeHandle");
   resizeHandle?.addEventListener("pointerdown", (event) => {
     const split = $("sourceSplit");
@@ -1277,6 +1295,7 @@ function buildMalayalamKeyboard() {
 buildMalayalamKeyboard();
 bindEvents();
 applySplitWidth(splitSourceWidth);
+applyMalayalamZoom(malayalamZoom);
 updatePageStatus();
 renderImageGallery();
 renderPreview();
