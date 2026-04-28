@@ -51,6 +51,10 @@ let isShowingPage = false;
 let malayalamEditMode = "text";
 let sourceViewerFile = null;
 let localDbPromise;
+let selectedLayoutBlock = null;
+let undoStack = [];
+let redoStack = [];
+let suppressHistory = false;
 
 if (window.pdfjsLib) {
   window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -118,6 +122,68 @@ function restore(data) {
   renderImageGallery();
   showPage(currentPage);
   renderPreview();
+}
+
+function captureEditState() {
+  return {
+    values: Object.fromEntries(stateKeys.map((key) => [key, $(key)?.value ?? ""])),
+    malayalamPages: structuredClone(malayalamPages),
+    malayalamLayouts: structuredClone(malayalamLayouts),
+    imageAssets: structuredClone(imageAssets),
+    selectedImageId,
+    currentPage,
+    malayalamEditMode
+  };
+}
+
+function applyEditState(state) {
+  suppressHistory = true;
+  Object.entries(state.values || {}).forEach(([key, value]) => {
+    if ($(key)) $(key).value = value;
+  });
+  malayalamPages = structuredClone(state.malayalamPages || []);
+  malayalamLayouts = structuredClone(state.malayalamLayouts || []);
+  imageAssets = structuredClone(state.imageAssets || []);
+  selectedImageId = state.selectedImageId || "";
+  currentPage = Number(state.currentPage || 1);
+  malayalamEditMode = state.malayalamEditMode || "text";
+  selectedLayoutBlock = null;
+  renderImageGallery();
+  showPage(currentPage);
+  suppressHistory = false;
+}
+
+function saveEditHistory() {
+  if (suppressHistory) return;
+  const state = captureEditState();
+  const serialized = JSON.stringify(state);
+  if (undoStack.at(-1)?.serialized === serialized) return;
+  undoStack.push({ state, serialized });
+  if (undoStack.length > 60) undoStack.shift();
+  redoStack = [];
+}
+
+function undoEdit() {
+  if (!undoStack.length) {
+    toast("Nothing to undo.");
+    return;
+  }
+  persistCurrentPageEdits();
+  redoStack.push(captureEditState());
+  const previous = undoStack.pop().state;
+  applyEditState(previous);
+  toast("Undo done.");
+}
+
+function redoEdit() {
+  if (!redoStack.length) {
+    toast("Nothing to redo.");
+    return;
+  }
+  persistCurrentPageEdits();
+  undoStack.push({ state: captureEditState(), serialized: JSON.stringify(captureEditState()) });
+  applyEditState(redoStack.pop());
+  toast("Redo done.");
 }
 
 async function saveLocal() {
@@ -398,7 +464,7 @@ function showPage(pageNumber) {
 }
 
 function persistCurrentPageEdits() {
-  if (isShowingPage) return;
+  if (isShowingPage || suppressHistory) return;
   const index = currentPage - 1;
   if (englishPages.length && index >= 0) englishPages[index] = $("englishText").value;
   if (malayalamPages.length && index >= 0) malayalamPages[index] = $("malayalamText").value;
@@ -422,6 +488,7 @@ function persistCurrentPageEdits() {
 
 async function importIntoTarget(file, target) {
   if (!file) return;
+  saveEditHistory();
   $("importStatus").textContent = `Reading ${file.name}...`;
   const pages = await extractFilePages(file);
 
@@ -455,6 +522,7 @@ async function importIntoTarget(file, target) {
 
 function createMalayalamLayoutFromSource() {
   persistCurrentPageEdits();
+  saveEditHistory();
   const index = currentPage - 1;
   const source = englishLayouts[index] || { width: 612, height: 792, lines: [] };
 
@@ -497,6 +565,7 @@ function ensureCurrentLayout() {
 
 function addLayoutTextBlock() {
   persistCurrentPageEdits();
+  saveEditHistory();
   ensureCurrentLayout();
   const index = currentPage - 1;
   malayalamLayouts[index].lines.push({
@@ -517,6 +586,7 @@ function tableHtml(rows = 3, columns = 3) {
 
 function addLayoutTable() {
   persistCurrentPageEdits();
+  saveEditHistory();
   ensureCurrentLayout();
   const index = currentPage - 1;
   malayalamLayouts[index].lines.push({
@@ -537,10 +607,9 @@ function renderMalayalamLayout() {
   const layout = malayalamLayouts[currentPage - 1];
 
   if (!layout?.lines?.length) {
-    editor.innerHTML = '<div class="layout-empty"><p>Click Copy Source Layout to create editable Malayalam blocks with the English page format. If the source is scanned, use Add Text Block or Add Table.</p><div class="layout-empty-actions"><button id="copyLayoutEmptyBtn" type="button">Copy Source Layout</button><button id="addTextBlockEmptyBtn" type="button">Add Text Block</button><button id="addTableEmptyBtn" type="button">Add Table</button></div></div>';
+    editor.innerHTML = '<div class="layout-empty"><p>Click Copy Source Layout to create editable Malayalam blocks with the English page format. If the source is scanned, use Add Text Block here, or use Add Table from the Page Match tools on the left.</p><div class="layout-empty-actions"><button id="copyLayoutEmptyBtn" type="button">Copy Source Layout</button><button id="addTextBlockEmptyBtn" type="button">Add Text Block</button></div></div>';
     $("copyLayoutEmptyBtn")?.addEventListener("click", createMalayalamLayoutFromSource);
     $("addTextBlockEmptyBtn")?.addEventListener("click", addLayoutTextBlock);
-    $("addTableEmptyBtn")?.addEventListener("click", addLayoutTable);
     return;
   }
 
@@ -562,6 +631,14 @@ function renderMalayalamLayout() {
 
   editor.innerHTML = `<div class="layout-page" style="width:${width}px;height:${height}px;">${lines}</div>`;
   editor.querySelectorAll(".layout-block, .layout-table").forEach((block) => {
+    block.addEventListener("click", (event) => {
+      event.stopPropagation();
+      selectLayoutBlock(block);
+    });
+    block.addEventListener("focusin", () => {
+      saveEditHistory();
+      selectLayoutBlock(block);
+    });
     block.addEventListener("input", persistCurrentPageEdits);
     block.addEventListener("paste", (event) => {
       const text = event.clipboardData?.getData("text/plain");
@@ -571,6 +648,7 @@ function renderMalayalamLayout() {
       persistCurrentPageEdits();
     });
   });
+  editor.querySelector(".layout-page")?.addEventListener("click", () => selectLayoutBlock(null));
 }
 
 function applyMalayalamMode() {
@@ -583,6 +661,38 @@ function applyMalayalamMode() {
     layout.classList.add("hidden");
     textarea.classList.remove("hidden");
   }
+}
+
+function selectLayoutBlock(block) {
+  selectedLayoutBlock?.classList.remove("selected");
+  selectedLayoutBlock = block;
+  selectedLayoutBlock?.classList.add("selected");
+}
+
+function deleteSelectedEdit() {
+  saveEditHistory();
+  if (selectedLayoutBlock) {
+    selectedLayoutBlock.remove();
+    selectedLayoutBlock = null;
+    persistCurrentPageEdits();
+    renderMalayalamLayout();
+    toast("Selected layout item deleted.");
+    return;
+  }
+
+  const area = selectedTextarea();
+  if (area && area.selectionStart !== area.selectionEnd) {
+    const start = area.selectionStart;
+    area.value = area.value.slice(0, start) + area.value.slice(area.selectionEnd);
+    area.selectionStart = area.selectionEnd = start;
+    area.focus();
+    persistCurrentPageEdits();
+    renderPreview();
+    toast("Selected text deleted.");
+    return;
+  }
+
+  toast("Select text, a layout block, or a table first.");
 }
 
 function escapeHtml(value) {
@@ -719,6 +829,7 @@ function wrapSelection(kind) {
 }
 
 function splitVerses() {
+  saveEditHistory();
   $("finalText").value = $("finalText").value.replace(/\s*(\d+)\s+/g, "\n[v $1] ");
   renderPreview();
   toast("Verse markers added where numbers were found.");
@@ -726,6 +837,7 @@ function splitVerses() {
 
 function placeBsiAtTop() {
   persistCurrentPageEdits();
+  saveEditHistory();
   const bsi = $("bsiText").value.trim();
   const notes = $("malayalamText").value.trim();
   $("finalText").value = [bsi, notes].filter(Boolean).join("\n\n");
@@ -881,18 +993,28 @@ function bindEvents() {
       toast("Malayalam import failed.");
     }
   });
-  $("imageFileInput").addEventListener("change", async (event) => {
+  $("imageFileInput")?.addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file) return;
     try {
+      saveEditHistory();
       await addImageFile(file);
     } catch (error) {
       toast(`Image import failed: ${error.message}`);
     }
   });
-  $("insertImageBtn").addEventListener("click", () => insertImageMarker());
+  $("insertImageBtn")?.addEventListener("click", () => {
+    saveEditHistory();
+    insertImageMarker();
+  });
   $("toggleExtractedEnglishBtn").addEventListener("click", () => {
     $("englishExtractedPanel").classList.toggle("collapsed");
+  });
+  $("undoEditBtn").addEventListener("click", undoEdit);
+  $("redoEditBtn").addEventListener("click", redoEdit);
+  $("deleteSelectionBtn").addEventListener("click", deleteSelectedEdit);
+  $("editorOptionsBtn").addEventListener("click", () => {
+    $("editorOptionsPanel").classList.toggle("hidden");
   });
   document.addEventListener("paste", async (event) => {
     const imageItem = Array.from(event.clipboardData?.items || []).find((item) => item.type.startsWith("image/"));
@@ -926,11 +1048,13 @@ function bindEvents() {
   $("insertBsiBtn").addEventListener("click", placeBsiAtTop);
   $("applyGlossaryBtn").addEventListener("click", suggestWords);
   $("normalizeBtn").addEventListener("click", () => {
+    saveEditHistory();
     $("finalText").value = normalizeReferences($("finalText").value);
     renderPreview();
     toast("Text normalized.");
   });
   $("cleanRefsBtn").addEventListener("click", () => {
+    saveEditHistory();
     const area = selectedTextarea();
     area.value = normalizeReferences(area.value);
     renderPreview();
@@ -968,12 +1092,16 @@ function bindEvents() {
     persistCurrentPageEdits();
     renderPreview();
   });
+  $("malayalamText").addEventListener("focus", saveEditHistory);
   $("malayalamText").addEventListener("paste", (event) => {
     const text = event.clipboardData?.getData("text/plain");
     if (!text) return;
+    saveEditHistory();
     event.preventDefault();
     insertText(text);
   });
+  $("finalText")?.addEventListener("focus", saveEditHistory);
+  $("bsiText")?.addEventListener("focus", saveEditHistory);
   stateKeys
     .filter((key) => key !== "englishText" && key !== "malayalamText")
     .forEach((key) => $(key)?.addEventListener("input", renderPreview));
