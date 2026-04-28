@@ -37,6 +37,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 - Exports:
   - Word-compatible `.doc`
   - HTML for InDesign placement
+  - InDesign Tagged Text
   - JSON archive
   - Browser print/PDF
 
@@ -58,8 +59,8 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 14. Use `Compose` to add verse numbers, references, symbols, glossary words, translation suggestions, and notes.
 15. Use `Normalize Text` to clean references and number style.
 16. Use `Run Checks` before export.
-17. Export Word/HTML/JSON and print to PDF.
-18. For final print layout, place the exported HTML in InDesign, or ask for ICML export once paragraph/character style names are finalized.
+17. Export Word/HTML/InDesign Tagged Text/JSON, or print to PDF.
+18. For final print layout, place the exported HTML or Tagged Text in InDesign.
 
 ## Project Structure
 
@@ -161,7 +162,7 @@ When the API is not configured, the editor opens Google Translate in a new brows
 
 ## Print And InDesign Plan
 
-Current export gives you Word-compatible `.doc`, browser PDF, HTML, and JSON. For a 3000-4000 page print project, the next production step should be a style-controlled export layer:
+Current export uses the Malayalam editing window content and gives you Word-compatible `.doc`, browser PDF, InDesign HTML, InDesign Tagged Text, and JSON. For a 3000-4000 page print project, the next production step should be a deeper style-controlled export layer:
 
 - Paragraph styles: `VerseText`, `NoteText`, `ArticleTitle`, `ArticleBody`, `TableText`, `MapCaption`.
 - Character styles: `VerseNumber`, `BibleReference`, `FootnoteSymbol`, `TranslatorNote`.
