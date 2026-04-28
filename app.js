@@ -41,10 +41,13 @@ const mlKeys = ["അ", "ആ", "ഇ", "ഈ", "ഉ", "ഊ", "എ", "ഏ", "ഐ", "
 
 let englishPages = [];
 let malayalamPages = [];
+let englishLayouts = [];
+let malayalamLayouts = [];
 let imageAssets = [];
 let selectedImageId = "";
 let currentPage = 1;
 let isShowingPage = false;
+let malayalamEditMode = "text";
 let sourceViewerFile = null;
 let localDbPromise;
 
@@ -65,6 +68,9 @@ function snapshot() {
     ...Object.fromEntries(stateKeys.map((key) => [key, $(key)?.value ?? ""])),
     englishPages,
     malayalamPages,
+    englishLayouts,
+    malayalamLayouts,
+    malayalamEditMode,
     imageAssets,
     selectedImageId,
     currentPage
@@ -102,6 +108,9 @@ function restore(data) {
   });
   englishPages = Array.isArray(data.englishPages) ? data.englishPages : [];
   malayalamPages = Array.isArray(data.malayalamPages) ? data.malayalamPages : [];
+  englishLayouts = Array.isArray(data.englishLayouts) ? data.englishLayouts : [];
+  malayalamLayouts = Array.isArray(data.malayalamLayouts) ? data.malayalamLayouts : [];
+  malayalamEditMode = data.malayalamEditMode || "text";
   imageAssets = Array.isArray(data.imageAssets) ? data.imageAssets : [];
   selectedImageId = data.selectedImageId || imageAssets[0]?.id || "";
   currentPage = Number(data.currentPage || 1);
@@ -182,28 +191,67 @@ async function extractPdfPages(file) {
   const buffer = await file.arrayBuffer();
   const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
   const pages = [];
+  const layouts = [];
 
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
     const page = await pdf.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 1 });
     const textContent = await page.getTextContent();
     let lastY = null;
     const lines = [];
     let line = "";
+    let lineItems = [];
+    const positionedLines = [];
+
+    const pushLine = () => {
+      const text = line.trim();
+      if (!text) {
+        line = "";
+        lineItems = [];
+        return;
+      }
+      const minX = Math.min(...lineItems.map((item) => item.x));
+      const maxX = Math.max(...lineItems.map((item) => item.x + item.width));
+      const avgY = lineItems.reduce((sum, item) => sum + item.y, 0) / lineItems.length;
+      const avgHeight = lineItems.reduce((sum, item) => sum + item.height, 0) / lineItems.length;
+      lines.push(text);
+      positionedLines.push({
+        text,
+        x: minX / viewport.width,
+        y: 1 - avgY / viewport.height,
+        width: Math.max((maxX - minX) / viewport.width, 0.08),
+        height: Math.max(avgHeight / viewport.height, 0.018)
+      });
+      line = "";
+      lineItems = [];
+    };
 
     textContent.items.forEach((item) => {
       const y = Math.round(item.transform[5]);
       if (lastY !== null && Math.abs(y - lastY) > 4) {
-        lines.push(line.trim());
-        line = "";
+        pushLine();
       }
       line += `${item.str} `;
+      lineItems.push({
+        x: item.transform[4],
+        y: item.transform[5],
+        width: item.width || item.str.length * 5,
+        height: item.height || Math.abs(item.transform[0]) || 10
+      });
       lastY = y;
     });
 
-    if (line.trim()) lines.push(line.trim());
+    pushLine();
     pages.push(lines.filter(Boolean).join("\n"));
+    layouts.push({
+      pageNumber,
+      width: viewport.width,
+      height: viewport.height,
+      lines: positionedLines
+    });
   }
 
+  file._extractedLayouts = layouts;
   return pages;
 }
 
@@ -343,6 +391,8 @@ function showPage(pageNumber) {
 
   updatePageStatus();
   renderSourceViewer();
+  renderMalayalamLayout();
+  applyMalayalamMode();
   renderPreview();
 }
 
@@ -351,6 +401,20 @@ function persistCurrentPageEdits() {
   const index = currentPage - 1;
   if (englishPages.length && index >= 0) englishPages[index] = $("englishText").value;
   if (malayalamPages.length && index >= 0) malayalamPages[index] = $("malayalamText").value;
+  if (malayalamLayouts[index]) {
+    const page = $("malayalamLayoutEditor").querySelector(".layout-page");
+    if (page) {
+      malayalamLayouts[index].lines = Array.from(page.querySelectorAll(".layout-line")).map((line) => ({
+        text: line.innerText,
+        x: Number(line.dataset.x),
+        y: Number(line.dataset.y),
+        width: Number(line.dataset.width),
+        height: Number(line.dataset.height)
+      }));
+      $("malayalamText").value = malayalamLayouts[index].lines.map((line) => line.text).join("\n");
+      malayalamPages[index] = $("malayalamText").value;
+    }
+  }
 }
 
 async function importIntoTarget(file, target) {
@@ -364,6 +428,7 @@ async function importIntoTarget(file, target) {
 
   if (target === "english") {
     englishPages = pages.slice();
+    englishLayouts = Array.isArray(file._extractedLayouts) ? file._extractedLayouts : [];
     setSourceViewer(file, pages);
     $("englishText").value = englishPages[currentPage - 1] || englishPages[0] || "";
     $("importStatus").textContent = `English loaded from ${file.name}: ${englishPages.length} page(s).`;
@@ -376,12 +441,78 @@ async function importIntoTarget(file, target) {
       return;
     }
     malayalamPages = pages.slice();
+    if (!malayalamLayouts.length) malayalamLayouts = [];
     $("malayalamText").value = malayalamPages[currentPage - 1] || malayalamPages[0] || "";
     $("importStatus").textContent = `Malayalam loaded from ${file.name}: ${malayalamPages.length} page(s).`;
     toast(`Malayalam loaded: ${malayalamPages.length} page(s).`);
   }
 
   showPage(currentPage);
+}
+
+function createMalayalamLayoutFromSource() {
+  persistCurrentPageEdits();
+  const index = currentPage - 1;
+  const source = englishLayouts[index];
+  if (!source?.lines?.length) {
+    toast("This source page has no captured layout. PDF pages with selectable text work best.");
+    return;
+  }
+
+  const existingMalayalam = ($("malayalamText").value || "").split(/\r?\n/);
+  malayalamLayouts[index] = {
+    width: source.width,
+    height: source.height,
+    lines: source.lines.map((line, lineIndex) => ({
+      ...line,
+      text: existingMalayalam[lineIndex] || ""
+    }))
+  };
+  malayalamEditMode = "layout";
+  renderMalayalamLayout();
+  applyMalayalamMode();
+  toast("Source page layout copied to Malayalam editor.");
+}
+
+function renderMalayalamLayout() {
+  const editor = $("malayalamLayoutEditor");
+  if (!editor) return;
+  const layout = malayalamLayouts[currentPage - 1];
+
+  if (!layout?.lines?.length) {
+    editor.innerHTML = '<p class="layout-empty">Click Copy Source Layout to create editable Malayalam blocks with the English page format.</p>';
+    return;
+  }
+
+  const maxWidth = Math.min(editor.clientWidth ? editor.clientWidth - 28 : 620, 760);
+  const width = maxWidth;
+  const height = Math.max(width * (layout.height / layout.width), 760);
+  const lines = layout.lines
+    .map((line, index) => {
+      const left = Math.max(line.x * width, 0);
+      const top = Math.max(line.y * height, 0);
+      const lineWidth = Math.max(line.width * width, 60);
+      const minHeight = Math.max(line.height * height, 18);
+      return `<div class="layout-line" contenteditable="true" data-index="${index}" data-x="${line.x}" data-y="${line.y}" data-width="${line.width}" data-height="${line.height}" style="left:${left}px;top:${top}px;width:${lineWidth}px;min-height:${minHeight}px;">${escapeHtml(line.text || "")}</div>`;
+    })
+    .join("");
+
+  editor.innerHTML = `<div class="layout-page" style="width:${width}px;height:${height}px;">${lines}</div>`;
+  editor.querySelectorAll(".layout-line").forEach((line) => {
+    line.addEventListener("input", persistCurrentPageEdits);
+  });
+}
+
+function applyMalayalamMode() {
+  const textarea = $("malayalamText");
+  const layout = $("malayalamLayoutEditor");
+  if (malayalamEditMode === "layout") {
+    textarea.classList.add("hidden");
+    layout.classList.remove("hidden");
+  } else {
+    layout.classList.add("hidden");
+    textarea.classList.remove("hidden");
+  }
 }
 
 function escapeHtml(value) {
@@ -507,6 +638,7 @@ function splitVerses() {
 }
 
 function placeBsiAtTop() {
+  persistCurrentPageEdits();
   const bsi = $("bsiText").value.trim();
   const notes = $("malayalamText").value.trim();
   $("finalText").value = [bsi, notes].filter(Boolean).join("\n\n");
@@ -613,18 +745,21 @@ function runChecks() {
 }
 
 function exportHtml() {
+  persistCurrentPageEdits();
   const data = snapshot();
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(data.projectTitle)}</title><style>body{font-family:"Nirmala UI","Kartika",serif;font-size:14pt;line-height:1.7}.verse-number{font-weight:bold;color:#a73f2b}</style></head><body>${$("printPreview").innerHTML}</body></html>`;
   download(`${data.projectTitle || "translation"}-indesign.html`, html, "text/html;charset=utf-8");
 }
 
 function exportDoc() {
+  persistCurrentPageEdits();
   const data = snapshot();
   const doc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${escapeHtml(data.projectTitle)}</title></head><body>${$("printPreview").innerHTML}</body></html>`;
   download(`${data.projectTitle || "translation"}.doc`, doc, "application/msword;charset=utf-8");
 }
 
 function exportJson() {
+  persistCurrentPageEdits();
   download(`${$("projectTitle").value || "translation"}-archive.json`, JSON.stringify(snapshot(), null, 2), "application/json;charset=utf-8");
 }
 
@@ -682,6 +817,18 @@ function bindEvents() {
   $("prevPageBtn").addEventListener("click", () => showPage(currentPage - 1));
   $("nextPageBtn").addEventListener("click", () => showPage(currentPage + 1));
   $("pageNumber").addEventListener("change", () => showPage($("pageNumber").value));
+  $("copyLayoutBtn").addEventListener("click", createMalayalamLayoutFromSource);
+  $("textModeBtn").addEventListener("click", () => {
+    persistCurrentPageEdits();
+    malayalamEditMode = "text";
+    applyMalayalamMode();
+  });
+  $("layoutModeBtn").addEventListener("click", () => {
+    persistCurrentPageEdits();
+    malayalamEditMode = "layout";
+    renderMalayalamLayout();
+    applyMalayalamMode();
+  });
 
   $("saveLocalBtn").addEventListener("click", saveLocal);
   $("loadLocalBtn").addEventListener("click", loadLocal);
