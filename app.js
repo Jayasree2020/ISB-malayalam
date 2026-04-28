@@ -62,7 +62,6 @@ if (localStorage.getItem("mlTranslationWorkbench:fontDefaultVersion") !== "mlw-d
 }
 let malayalamFontMode = localStorage.getItem("mlTranslationWorkbench:malayalamFontMode") || "mlw";
 let detectedDocumentFont = localStorage.getItem("mlTranslationWorkbench:detectedDocumentFont") || "";
-let autoSaveTimer = null;
 
 if (window.pdfjsLib) {
   window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -251,13 +250,6 @@ async function saveLocal() {
   toast("Saved in this browser.");
 }
 
-function scheduleAutoSave() {
-  clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(() => {
-    saveLocal().catch(() => {});
-  }, 1200);
-}
-
 async function loadLocal() {
   const current = snapshot();
   const id = localProjectId(current);
@@ -284,17 +276,6 @@ async function loadLocal() {
 
   restore(record);
   toast("Loaded saved work.");
-}
-
-async function autoLoadLastProject() {
-  const raw = localStorage.getItem("mlTranslationWorkbench:last") || localStorage.getItem("mlTranslationWorkbench");
-  if (!raw) return;
-  try {
-    restore(JSON.parse(raw));
-    toast("Previous browser work restored.");
-  } catch {
-    // Ignore old or broken browser saves.
-  }
 }
 
 function download(filename, content, type) {
@@ -1444,11 +1425,7 @@ function bindEvents() {
     .filter((key) => key !== "englishText" && key !== "malayalamText")
     .forEach((key) => $(key)?.addEventListener("input", () => {
       renderPreview();
-      scheduleAutoSave();
     }));
-  document.addEventListener("input", (event) => {
-    if (event.target?.matches?.("textarea,input,select")) scheduleAutoSave();
-  });
 }
 
 function buildMalayalamKeyboard() {
@@ -1469,4 +1446,3 @@ applyMalayalamZoom(malayalamZoom);
 updatePageStatus();
 renderImageGallery();
 renderPreview();
-autoLoadLastProject();

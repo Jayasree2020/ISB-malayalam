@@ -41,7 +41,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 - Saves to a Vercel-managed Neon Postgres database after Vercel storage is connected.
 - Opens Google Translate fallback when API keys are not configured.
 - Gives Malayalam glossary meanings for English words using the translate API when configured, with Google Translate fallback.
-- Auto-saves browser work and restores the previous browser work on reopen.
+- Saves browser work only when you click `Save`, and can restore saved browser work with `Load`.
 - Includes quick links to Google Malayalam typing/Input Tools and Google Translate.
 - Includes TypeIt support buttons: open TypeIt information/download page and copy the current Malayalam editing text for pasting into TypeIt.
 - Exports:
@@ -75,7 +75,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 ## Notes On Your Latest Requirements
 
 - Glossary: type an English word in `English word meaning` and click `Find Malayalam Meaning`.
-- Browser save: the app auto-saves and restores the latest browser work when reopened.
+- Browser save: click `Save` to store browser work, then click `Load` to restore it.
 - Malayalam typing: use the Malayalam editor directly, the built-in Malayalam character buttons, or the `Google Malayalam Typing` button.
 - Word import: DOCX/RTF/PDF are most reliable. Legacy `.doc` is best effort; if text is missing, save the file as `.docx` or PDF and upload again.
 - Google എഴുത്ത് ഉപകരണങ്ങൾ: use the `Google Malayalam Typing` button in the Malayalam Typing panel.
