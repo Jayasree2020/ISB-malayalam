@@ -72,6 +72,10 @@ textarea {
   line-height: 1.55;
 }
 
+textarea[lang="ml"] {
+  font-family: "Nirmala UI", "Kartika", "Rachana", "AnjaliOldLipi", serif;
+}
+
 .topbar {
   display: flex;
   align-items: center;
