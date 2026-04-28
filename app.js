@@ -41,6 +41,8 @@ const mlKeys = ["അ", "ആ", "ഇ", "ഈ", "ഉ", "ഊ", "എ", "ഏ", "ഐ", "
 
 let englishPages = [];
 let malayalamPages = [];
+let imageAssets = [];
+let selectedImageId = "";
 let currentPage = 1;
 let isShowingPage = false;
 let localDbPromise;
@@ -62,6 +64,8 @@ function snapshot() {
     ...Object.fromEntries(stateKeys.map((key) => [key, $(key)?.value ?? ""])),
     englishPages,
     malayalamPages,
+    imageAssets,
+    selectedImageId,
     currentPage
   };
 }
@@ -97,7 +101,10 @@ function restore(data) {
   });
   englishPages = Array.isArray(data.englishPages) ? data.englishPages : [];
   malayalamPages = Array.isArray(data.malayalamPages) ? data.malayalamPages : [];
+  imageAssets = Array.isArray(data.imageAssets) ? data.imageAssets : [];
+  selectedImageId = data.selectedImageId || imageAssets[0]?.id || "";
   currentPage = Number(data.currentPage || 1);
+  renderImageGallery();
   showPage(currentPage);
   renderPreview();
 }
@@ -311,6 +318,68 @@ function insertText(value) {
   renderPreview();
 }
 
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function addImageFile(file) {
+  if (!file || !file.type.startsWith("image/")) {
+    toast("Please choose an image file.");
+    return;
+  }
+
+  const dataUrl = await fileToDataUrl(file);
+  const asset = {
+    id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: file.name || "Pasted image",
+    dataUrl,
+    createdAt: new Date().toISOString()
+  };
+
+  imageAssets.push(asset);
+  selectedImageId = asset.id;
+  renderImageGallery();
+  insertImageMarker(asset.id);
+  toast("Image added to preview.");
+}
+
+function insertImageMarker(id = selectedImageId) {
+  const asset = imageAssets.find((item) => item.id === id);
+  if (!asset) {
+    toast("Add or select an image first.");
+    return;
+  }
+  insertText(`\n[image ${asset.id} ${asset.name}]\n`);
+}
+
+function renderImageGallery() {
+  const box = $("imageGallery");
+  if (!box) return;
+  box.innerHTML = "";
+
+  if (!imageAssets.length) {
+    box.innerHTML = '<p class="hint">No images added yet.</p>';
+    return;
+  }
+
+  imageAssets.forEach((asset) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = `image-item${asset.id === selectedImageId ? " selected" : ""}`;
+    item.innerHTML = `<img alt="" src="${asset.dataUrl}"><span class="image-name">${escapeHtml(asset.name)}</span>`;
+    item.addEventListener("click", () => {
+      selectedImageId = asset.id;
+      renderImageGallery();
+    });
+    box.appendChild(item);
+  });
+}
+
 function wrapSelection(kind) {
   const area = selectedTextarea();
   const start = area.selectionStart;
@@ -402,11 +471,21 @@ async function translateSelection() {
 
 function renderPreview() {
   const raw = $("finalText").value || "";
+  const imageMap = Object.fromEntries(imageAssets.map((asset) => [asset.id, asset]));
   const html = escapeHtml(raw)
     .replace(/\[v\s+([^\]]+)\]/g, '<span class="verse-number">$1</span>')
     .replace(/\[ref\s+([^\]]+)\]/g, '<span class="reference">$1</span>')
+    .replace(/\[image\s+([^\]\s]+)(?:\s+([^\]]+))?\]/g, (match, id, caption) => {
+      const asset = imageMap[id];
+      if (!asset) return `<span class="missing-image">${match}</span>`;
+      const label = caption || asset.name || "Image";
+      return `<figure class="print-image"><img src="${asset.dataUrl}" alt="${escapeHtml(label)}"><figcaption>${escapeHtml(label)}</figcaption></figure>`;
+    })
     .split(/\n{2,}/)
-    .map((para) => `<p class="verse-line">${para.replace(/\n/g, "<br>")}</p>`)
+    .map((para) => {
+      const content = para.replace(/\n/g, "<br>");
+      return content.includes('class="print-image"') ? content : `<p class="verse-line">${content}</p>`;
+    })
     .join("");
   $("printPreview").innerHTML = html || "<p class=\"hint\">Print preview will appear here.</p>";
 }
@@ -471,6 +550,23 @@ function bindEvents() {
       toast("Malayalam import failed.");
     }
   });
+  $("imageFileInput").addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      await addImageFile(file);
+    } catch (error) {
+      toast(`Image import failed: ${error.message}`);
+    }
+  });
+  $("insertImageBtn").addEventListener("click", () => insertImageMarker());
+  document.addEventListener("paste", async (event) => {
+    const imageItem = Array.from(event.clipboardData?.items || []).find((item) => item.type.startsWith("image/"));
+    if (!imageItem) return;
+    event.preventDefault();
+    const file = imageItem.getAsFile();
+    if (file) await addImageFile(file);
+  });
   $("prevPageBtn").addEventListener("click", () => showPage(currentPage - 1));
   $("nextPageBtn").addEventListener("click", () => showPage(currentPage + 1));
   $("pageNumber").addEventListener("change", () => showPage($("pageNumber").value));
@@ -534,4 +630,5 @@ function buildMalayalamKeyboard() {
 buildMalayalamKeyboard();
 bindEvents();
 updatePageStatus();
+renderImageGallery();
 renderPreview();
