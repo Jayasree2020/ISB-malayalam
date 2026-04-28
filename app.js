@@ -496,14 +496,14 @@ function persistCurrentPageEdits() {
     if (page) {
       malayalamLayouts[index].lines = Array.from(page.querySelectorAll(".layout-block, .layout-table")).map((block) => ({
         type: block.dataset.type || "text",
-        text: block.dataset.type === "table" ? "" : block.innerText,
+        text: block.dataset.type === "table" ? tableElementToText(block) : cleanEditableText(block.innerText),
         html: block.dataset.type === "table" ? block.innerHTML : "",
         x: Number(block.dataset.x),
         y: Number(block.dataset.y),
         width: Number(block.dataset.width),
         height: Number(block.dataset.height)
       }));
-      $("malayalamText").value = malayalamLayouts[index].lines.map((line) => line.type === "table" ? "[table]" : line.text).join("\n");
+      $("malayalamText").value = malayalamLayouts[index].lines.map((line) => line.text).filter(Boolean).join("\n");
       malayalamPages[index] = $("malayalamText").value;
     }
   }
@@ -604,7 +604,21 @@ function addLayoutTextBlock() {
 }
 
 function tableHtml(rows = 3, columns = 3) {
-  return `<table>${Array.from({ length: rows }).map(() => `<tr>${Array.from({ length: columns }).map(() => '<td contenteditable="true"></td>').join("")}</tr>`).join("")}</table>`;
+  return `<table>${Array.from({ length: rows }).map(() => `<tr>${Array.from({ length: columns }).map(() => '<td contenteditable="plaintext-only"></td>').join("")}</tr>`).join("")}</table>`;
+}
+
+function cleanEditableText(value) {
+  return cleanMalayalamPaste(value)
+    .replace(/\u00a0/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trimEnd();
+}
+
+function tableElementToText(block) {
+  return Array.from(block.querySelectorAll("tr"))
+    .map((row) => Array.from(row.querySelectorAll("td")).map((cell) => cleanEditableText(cell.innerText)).join("\t"))
+    .filter((row) => row.trim())
+    .join("\n");
 }
 
 function addLayoutTable() {
@@ -648,7 +662,7 @@ function renderMalayalamLayout() {
       if (line.type === "table") {
         return `<div class="layout-table" data-type="table" data-index="${index}" data-x="${line.x}" data-y="${line.y}" data-width="${line.width}" data-height="${line.height}" style="left:${left}px;top:${top}px;width:${lineWidth}px;min-height:${minHeight}px;">${line.html || tableHtml(3, 3)}</div>`;
       }
-      return `<div class="layout-block layout-line" contenteditable="true" data-type="text" data-index="${index}" data-x="${line.x}" data-y="${line.y}" data-width="${line.width}" data-height="${line.height}" style="left:${left}px;top:${top}px;width:${lineWidth}px;min-height:${minHeight}px;">${escapeHtml(line.text || "")}</div>`;
+      return `<div class="layout-block layout-line" contenteditable="plaintext-only" data-type="text" data-index="${index}" data-x="${line.x}" data-y="${line.y}" data-width="${line.width}" data-height="${line.height}" style="left:${left}px;top:${top}px;width:${lineWidth}px;min-height:${minHeight}px;">${escapeHtml(line.text || "")}</div>`;
     })
     .join("");
 
@@ -694,6 +708,15 @@ function selectLayoutBlock(block) {
 
 function deleteSelectedEdit() {
   saveEditHistory();
+  const selection = window.getSelection();
+  if (selection && !selection.isCollapsed && $("malayalamLayoutEditor")?.contains(selection.anchorNode)) {
+    selection.deleteFromDocument();
+    persistCurrentPageEdits();
+    renderMalayalamLayout();
+    toast("Selected layout text deleted.");
+    return;
+  }
+
   if (selectedLayoutBlock) {
     selectedLayoutBlock.remove();
     selectedLayoutBlock = null;
@@ -1104,13 +1127,6 @@ function bindEvents() {
   $("editorOptionsBtn").addEventListener("click", () => {
     $("editorOptionsPanel").classList.toggle("hidden");
   });
-  document.addEventListener("paste", async (event) => {
-    const imageItem = Array.from(event.clipboardData?.items || []).find((item) => item.type.startsWith("image/"));
-    if (!imageItem) return;
-    event.preventDefault();
-    const file = imageItem.getAsFile();
-    if (file) await addImageFile(file);
-  });
   const resizeHandle = $("splitResizeHandle");
   resizeHandle?.addEventListener("pointerdown", (event) => {
     const split = $("sourceSplit");
@@ -1144,8 +1160,6 @@ function bindEvents() {
       applySplitWidth(splitSourceWidth + 3);
     }
   });
-  $("widenEditorBtn").addEventListener("click", () => applySplitWidth(splitSourceWidth - 5));
-  $("narrowEditorBtn").addEventListener("click", () => applySplitWidth(splitSourceWidth + 5));
   $("prevPageBtn").addEventListener("click", () => showPage(currentPage - 1));
   $("nextPageBtn").addEventListener("click", () => showPage(currentPage + 1));
   $("pageNumber").addEventListener("change", () => showPage($("pageNumber").value));
