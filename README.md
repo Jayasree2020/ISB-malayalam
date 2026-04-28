@@ -15,7 +15,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 ## What The Workspace Does Now
 
 - Stores project title, section reference, editor name, English source, Malayalam translation, BSI verse text, final print body, glossary, and editor notes.
-- Extracts text from uploaded PDF and DOCX files page by page in the browser.
+- Extracts text from uploaded PDF, DOCX, RTF, text, and many legacy DOC files page by page in the browser.
 - Shows the original English source beside the editable Malayalam translation.
 - Keeps PDF files visible as PDFs, so the English page can be viewed as it is while Malayalam is edited.
 - Imports or pastes images, maps, and pictures, then shows them in the viewing/print preview.
@@ -34,9 +34,9 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 
 ## Suggested Editorial Workflow
 
-1. Upload the English PDF/DOCX/image/text file in the English file box.
+1. Upload the English PDF/DOC/DOCX/RTF/image/text file in the English file box.
 2. The original English source appears on the left. PDFs are shown as PDFs, not only extracted text.
-3. Upload the Malayalam PDF/DOCX/text file in the Malayalam file box, or paste/type Malayalam directly.
+3. Upload the Malayalam PDF/DOC/DOCX/RTF/text file in the Malayalam file box, or paste/type Malayalam directly.
 4. The Malayalam page appears on the right in an editable Malayalam-font box.
 5. Edit the Malayalam box directly; edits are kept page by page while you navigate.
 6. Use `Previous`, `Next`, or the page number field to move through both documents together.
@@ -162,6 +162,7 @@ Current export gives you Word-compatible `.doc`, browser PDF, HTML, and JSON. Fo
 ## Recommended Next Features
 
 - OCR for scanned PDFs that do not contain selectable text.
+- Server-side conversion for old binary `.doc` files that cannot be extracted cleanly in the browser.
 - Real `.docx` export with Word styles.
 - Dedicated image library using Vercel Blob for very large print assets.
 - ICML export after InDesign style names are chosen.
