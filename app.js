@@ -404,14 +404,16 @@ function persistCurrentPageEdits() {
   if (malayalamLayouts[index]) {
     const page = $("malayalamLayoutEditor").querySelector(".layout-page");
     if (page) {
-      malayalamLayouts[index].lines = Array.from(page.querySelectorAll(".layout-line")).map((line) => ({
-        text: line.innerText,
-        x: Number(line.dataset.x),
-        y: Number(line.dataset.y),
-        width: Number(line.dataset.width),
-        height: Number(line.dataset.height)
+      malayalamLayouts[index].lines = Array.from(page.querySelectorAll(".layout-block, .layout-table")).map((block) => ({
+        type: block.dataset.type || "text",
+        text: block.dataset.type === "table" ? "" : block.innerText,
+        html: block.dataset.type === "table" ? block.innerHTML : "",
+        x: Number(block.dataset.x),
+        y: Number(block.dataset.y),
+        width: Number(block.dataset.width),
+        height: Number(block.dataset.height)
       }));
-      $("malayalamText").value = malayalamLayouts[index].lines.map((line) => line.text).join("\n");
+      $("malayalamText").value = malayalamLayouts[index].lines.map((line) => line.type === "table" ? "[table]" : line.text).join("\n");
       malayalamPages[index] = $("malayalamText").value;
     }
   }
@@ -422,8 +424,8 @@ async function importIntoTarget(file, target) {
   $("importStatus").textContent = `Reading ${file.name}...`;
   const pages = await extractFilePages(file);
 
-  if (!pages.length) {
-    throw new Error("No selectable text was found. If this is a scanned PDF, OCR is needed.");
+  if (!pages.length && !file.type.startsWith("image/")) {
+    pages.push("");
   }
 
   if (target === "english") {
@@ -453,25 +455,79 @@ async function importIntoTarget(file, target) {
 function createMalayalamLayoutFromSource() {
   persistCurrentPageEdits();
   const index = currentPage - 1;
-  const source = englishLayouts[index];
-  if (!source?.lines?.length) {
-    toast("This source page has no captured layout. PDF pages with selectable text work best.");
-    return;
-  }
+  const source = englishLayouts[index] || { width: 612, height: 792, lines: [] };
 
   const existingMalayalam = ($("malayalamText").value || "").split(/\r?\n/);
   malayalamLayouts[index] = {
     width: source.width,
     height: source.height,
-    lines: source.lines.map((line, lineIndex) => ({
-      ...line,
-      text: existingMalayalam[lineIndex] || ""
-    }))
+    lines: source.lines.length
+      ? source.lines.map((line, lineIndex) => ({
+          ...line,
+          type: "text",
+          text: existingMalayalam[lineIndex] || ""
+        }))
+      : [
+          {
+            type: "text",
+            text: existingMalayalam.filter(Boolean).join("\n"),
+            x: 0.08,
+            y: 0.08,
+            width: 0.84,
+            height: 0.08
+          }
+        ]
   };
   malayalamEditMode = "layout";
   renderMalayalamLayout();
   applyMalayalamMode();
-  toast("Source page layout copied to Malayalam editor.");
+  toast(source.lines.length ? "Source page layout copied to Malayalam editor." : "Blank page layout created. Add text blocks or tables manually.");
+}
+
+function ensureCurrentLayout() {
+  const index = currentPage - 1;
+  if (!malayalamLayouts[index]) {
+    const source = englishLayouts[index] || { width: 612, height: 792 };
+    malayalamLayouts[index] = { width: source.width, height: source.height, lines: [] };
+  }
+  malayalamEditMode = "layout";
+  applyMalayalamMode();
+}
+
+function addLayoutTextBlock() {
+  persistCurrentPageEdits();
+  ensureCurrentLayout();
+  const index = currentPage - 1;
+  malayalamLayouts[index].lines.push({
+    type: "text",
+    text: "മലയാളം ടെക്സ്റ്റ്",
+    x: 0.08,
+    y: Math.min(0.12 + malayalamLayouts[index].lines.length * 0.06, 0.88),
+    width: 0.84,
+    height: 0.04
+  });
+  renderMalayalamLayout();
+  toast("Text block added.");
+}
+
+function tableHtml(rows = 3, columns = 3) {
+  return `<table>${Array.from({ length: rows }).map(() => `<tr>${Array.from({ length: columns }).map(() => '<td contenteditable="true"></td>').join("")}</tr>`).join("")}</table>`;
+}
+
+function addLayoutTable() {
+  persistCurrentPageEdits();
+  ensureCurrentLayout();
+  const index = currentPage - 1;
+  malayalamLayouts[index].lines.push({
+    type: "table",
+    html: tableHtml(3, 3),
+    x: 0.08,
+    y: Math.min(0.16 + malayalamLayouts[index].lines.length * 0.06, 0.78),
+    width: 0.84,
+    height: 0.18
+  });
+  renderMalayalamLayout();
+  toast("Table added. Click cells to type.");
 }
 
 function renderMalayalamLayout() {
@@ -480,8 +536,10 @@ function renderMalayalamLayout() {
   const layout = malayalamLayouts[currentPage - 1];
 
   if (!layout?.lines?.length) {
-    editor.innerHTML = '<div class="layout-empty"><p>Click Copy Source Layout to create editable Malayalam blocks with the English page format.</p><button id="copyLayoutEmptyBtn" type="button">Copy Source Layout</button></div>';
+    editor.innerHTML = '<div class="layout-empty"><p>Click Copy Source Layout to create editable Malayalam blocks with the English page format. If the source is scanned, use Add Text Block or Add Table.</p><div class="layout-empty-actions"><button id="copyLayoutEmptyBtn" type="button">Copy Source Layout</button><button id="addTextBlockEmptyBtn" type="button">Add Text Block</button><button id="addTableEmptyBtn" type="button">Add Table</button></div></div>';
     $("copyLayoutEmptyBtn")?.addEventListener("click", createMalayalamLayoutFromSource);
+    $("addTextBlockEmptyBtn")?.addEventListener("click", addLayoutTextBlock);
+    $("addTableEmptyBtn")?.addEventListener("click", addLayoutTable);
     return;
   }
 
@@ -494,13 +552,16 @@ function renderMalayalamLayout() {
       const top = Math.max(line.y * height, 0);
       const lineWidth = Math.max(line.width * width, 60);
       const minHeight = Math.max(line.height * height, 18);
-      return `<div class="layout-line" contenteditable="true" data-index="${index}" data-x="${line.x}" data-y="${line.y}" data-width="${line.width}" data-height="${line.height}" style="left:${left}px;top:${top}px;width:${lineWidth}px;min-height:${minHeight}px;">${escapeHtml(line.text || "")}</div>`;
+      if (line.type === "table") {
+        return `<div class="layout-table" data-type="table" data-index="${index}" data-x="${line.x}" data-y="${line.y}" data-width="${line.width}" data-height="${line.height}" style="left:${left}px;top:${top}px;width:${lineWidth}px;min-height:${minHeight}px;">${line.html || tableHtml(3, 3)}</div>`;
+      }
+      return `<div class="layout-block layout-line" contenteditable="true" data-type="text" data-index="${index}" data-x="${line.x}" data-y="${line.y}" data-width="${line.width}" data-height="${line.height}" style="left:${left}px;top:${top}px;width:${lineWidth}px;min-height:${minHeight}px;">${escapeHtml(line.text || "")}</div>`;
     })
     .join("");
 
   editor.innerHTML = `<div class="layout-page" style="width:${width}px;height:${height}px;">${lines}</div>`;
-  editor.querySelectorAll(".layout-line").forEach((line) => {
-    line.addEventListener("input", persistCurrentPageEdits);
+  editor.querySelectorAll(".layout-block, .layout-table").forEach((block) => {
+    block.addEventListener("input", persistCurrentPageEdits);
   });
 }
 
@@ -820,6 +881,8 @@ function bindEvents() {
   $("pageNumber").addEventListener("change", () => showPage($("pageNumber").value));
   $("copyLayoutBtn").addEventListener("click", createMalayalamLayoutFromSource);
   $("copyLayoutInlineBtn").addEventListener("click", createMalayalamLayoutFromSource);
+  $("addTextBlockBtn").addEventListener("click", addLayoutTextBlock);
+  $("addTableBtn").addEventListener("click", addLayoutTable);
   $("textModeBtn").addEventListener("click", () => {
     persistCurrentPageEdits();
     malayalamEditMode = "text";
