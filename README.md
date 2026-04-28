@@ -24,7 +24,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 - Adds Undo, Redo, Delete, and Options controls in the Malayalam editing section.
 - Keeps the BSI Bible text box on the left and the project title above the editing window.
 - Treats the Malayalam translation/editing window as the main document. Word/PDF/InDesign exports use only that window.
-- Displays Unicode Malayalam correctly by default, with an optional `MLW-TTKarthika` font mode when that legacy font is needed.
+- Displays the Malayalam translation window in `MLW-TTKarthika` by default, with a selector to switch to Unicode font mode if needed.
 - Keeps normal Western numerals and preserves English abbreviations when Malayalam text is pasted into layout blocks.
 - Preserves imported Word spacing, line breaks, indentation, and tabs as closely as possible in the editing window.
 - Filters binary Word import junk such as repeated `ÿÿÿ` characters and asks for DOCX/PDF when an old `.doc` cannot be read reliably.
@@ -42,6 +42,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 - Gives Malayalam glossary meanings for English words using the translate API when configured, with Google Translate fallback.
 - Auto-saves browser work and restores the previous browser work on reopen.
 - Includes quick links to Google Malayalam typing/Input Tools and Google Translate.
+- Includes TypeIt support buttons: open TypeIt information/download page and copy the current Malayalam editing text for pasting into TypeIt.
 - Exports:
   - Word-compatible `.doc`
   - HTML for InDesign placement
