@@ -45,6 +45,7 @@ let imageAssets = [];
 let selectedImageId = "";
 let currentPage = 1;
 let isShowingPage = false;
+let sourceViewerFile = null;
 let localDbPromise;
 
 if (window.pdfjsLib) {
@@ -220,7 +221,49 @@ async function extractFilePages(file) {
   if (/\.pdf$/i.test(file.name)) return extractPdfPages(file);
   if (/\.docx$/i.test(file.name)) return extractDocxPages(file);
   if (/\.(txt|md|html)$/i.test(file.name)) return splitTextIntoPages(await file.text());
+  if (file.type.startsWith("image/")) return [""];
   throw new Error("Please upload PDF, DOCX, TXT, MD, or HTML.");
+}
+
+function setSourceViewer(file, pages = []) {
+  if (sourceViewerFile?.url) URL.revokeObjectURL(sourceViewerFile.url);
+  const url = URL.createObjectURL(file);
+  let type = "text";
+  if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") type = "pdf";
+  if (file.type.startsWith("image/")) type = "image";
+  if (/\.docx$/i.test(file.name)) type = "docx";
+
+  sourceViewerFile = {
+    name: file.name,
+    type,
+    url,
+    pages
+  };
+  renderSourceViewer();
+}
+
+function renderSourceViewer() {
+  const viewer = $("sourceViewer");
+  if (!viewer) return;
+
+  if (!sourceViewerFile) {
+    viewer.innerHTML = '<p class="hint">Upload an English PDF, Word file, image, or text file to view it here.</p>';
+    return;
+  }
+
+  const { type, url, name, pages } = sourceViewerFile;
+  if (type === "pdf") {
+    viewer.innerHTML = `<iframe title="${escapeHtml(name)}" src="${url}#page=${currentPage}&view=FitH"></iframe>`;
+    return;
+  }
+
+  if (type === "image") {
+    viewer.innerHTML = `<img alt="${escapeHtml(name)}" src="${url}">`;
+    return;
+  }
+
+  const pageText = pages[currentPage - 1] || pages[0] || "";
+  viewer.innerHTML = `<pre class="source-text-view">${escapeHtml(pageText || "No selectable text was found in this file.")}</pre>`;
 }
 
 function updatePageStatus() {
@@ -241,6 +284,7 @@ function showPage(pageNumber) {
   isShowingPage = false;
 
   updatePageStatus();
+  renderSourceViewer();
   renderPreview();
 }
 
@@ -262,10 +306,17 @@ async function importIntoTarget(file, target) {
 
   if (target === "english") {
     englishPages = pages.slice();
+    setSourceViewer(file, pages);
     $("englishText").value = englishPages[currentPage - 1] || englishPages[0] || "";
     $("importStatus").textContent = `English loaded from ${file.name}: ${englishPages.length} page(s).`;
     toast(`English loaded: ${englishPages.length} page(s).`);
   } else {
+    if (file.type.startsWith("image/")) {
+      await addImageFile(file);
+      $("importStatus").textContent = "Malayalam image added to preview. Type or paste editable Malayalam text in the Malayalam box.";
+      toast("Malayalam image added. OCR is needed to make image text editable.");
+      return;
+    }
     malayalamPages = pages.slice();
     $("malayalamText").value = malayalamPages[currentPage - 1] || malayalamPages[0] || "";
     $("importStatus").textContent = `Malayalam loaded from ${file.name}: ${malayalamPages.length} page(s).`;
@@ -560,6 +611,9 @@ function bindEvents() {
     }
   });
   $("insertImageBtn").addEventListener("click", () => insertImageMarker());
+  $("toggleExtractedEnglishBtn").addEventListener("click", () => {
+    $("englishExtractedPanel").classList.toggle("collapsed");
+  });
   document.addEventListener("paste", async (event) => {
     const imageItem = Array.from(event.clipboardData?.items || []).find((item) => item.type.startsWith("image/"));
     if (!imageItem) return;
