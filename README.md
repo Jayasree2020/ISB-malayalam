@@ -6,6 +6,8 @@ Open `index.html` in a browser to use the local workspace immediately. Browser s
 
 GitHub repo: `https://github.com/Jayasree2020/ISB-malayalam`
 
+Live Vercel app: `https://isb-malayalam.vercel.app`
+
 ## Important Copyright Note
 
 Bible Society of India Malayalam Bible text is not bundled here. Paste or import BSI text only if your project has the required permission or license. The app gives you a place to use licensed text; it does not provide the text itself.
@@ -120,7 +122,7 @@ If you do not connect cloud storage, the editor still works locally through brow
 After Vercel deploys, open:
 
 ```text
-https://YOUR-VERCEL-DOMAIN/api/health
+https://isb-malayalam.vercel.app/api/health
 ```
 
 You should see `ok: true`. The response also tells you whether database and translation environment variables are configured.
