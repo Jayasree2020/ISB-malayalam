@@ -74,7 +74,10 @@ textarea {
 
 textarea {
   resize: vertical;
-  line-height: 1.55;
+  line-height: 1.35;
+  tab-size: 4;
+  white-space: pre;
+  overflow-x: auto;
 }
 
 textarea[lang="ml"] {
@@ -284,6 +287,7 @@ h2 {
   height: 100%;
   min-height: 360px;
   font-size: 16px;
+  line-height: 1.35;
 }
 
 .layout-editor {
