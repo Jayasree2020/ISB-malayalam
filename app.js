@@ -56,7 +56,11 @@ let undoStack = [];
 let redoStack = [];
 let suppressHistory = false;
 let malayalamZoom = Number(localStorage.getItem("mlTranslationWorkbench:malayalamZoom") || 100);
-let malayalamFontMode = localStorage.getItem("mlTranslationWorkbench:malayalamFontMode") || "unicode";
+if (localStorage.getItem("mlTranslationWorkbench:fontDefaultVersion") !== "mlw-default-1") {
+  localStorage.setItem("mlTranslationWorkbench:malayalamFontMode", "mlw");
+  localStorage.setItem("mlTranslationWorkbench:fontDefaultVersion", "mlw-default-1");
+}
+let malayalamFontMode = localStorage.getItem("mlTranslationWorkbench:malayalamFontMode") || "mlw";
 let autoSaveTimer = null;
 
 if (window.pdfjsLib) {
@@ -1065,6 +1069,28 @@ function openGoogleTranslateMalayalam() {
   window.open(`https://translate.google.com/?sl=en&tl=ml&text=${encodeURIComponent(selected)}&op=translate`, "_blank");
 }
 
+function openTypeIt() {
+  window.open("https://www.leosoftwares.in/", "_blank");
+  toast("Opened TypeIt information/download page.");
+}
+
+async function copyForTypeIt() {
+  const text = getEditedTextForExport();
+  if (!text.trim()) {
+    toast("Malayalam editing window is empty.");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast("Malayalam text copied. Paste it into TypeIt.");
+  } catch {
+    const area = selectedTextarea();
+    area.value = text;
+    area.select();
+    toast("Text selected. Press Ctrl+C, then paste into TypeIt.");
+  }
+}
+
 function renderPreview() {
   $("printPreview").innerHTML = getEditedExportHtml() || "<p class=\"hint\">Print preview will appear here.</p>";
 }
@@ -1264,6 +1290,8 @@ function bindEvents() {
   $("lookupGlossaryBtn").addEventListener("click", lookupGlossaryMeaning);
   $("googleInputToolsBtn").addEventListener("click", openGoogleInputTools);
   $("googleTranslateBtn").addEventListener("click", openGoogleTranslateMalayalam);
+  $("typeItBtn").addEventListener("click", openTypeIt);
+  $("copyForTypeItBtn").addEventListener("click", copyForTypeIt);
   $("malayalamFontMode").addEventListener("change", (event) => applyMalayalamFontMode(event.target.value));
   $("normalizeBtn").addEventListener("click", () => {
     saveEditHistory();
