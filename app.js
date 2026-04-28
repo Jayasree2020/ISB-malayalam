@@ -56,6 +56,7 @@ let undoStack = [];
 let redoStack = [];
 let suppressHistory = false;
 let malayalamZoom = Number(localStorage.getItem("mlTranslationWorkbench:malayalamZoom") || 100);
+let autoSaveTimer = null;
 
 if (window.pdfjsLib) {
   window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -220,6 +221,13 @@ async function saveLocal() {
   toast("Saved in this browser.");
 }
 
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    saveLocal().catch(() => {});
+  }, 1200);
+}
+
 async function loadLocal() {
   const current = snapshot();
   const id = localProjectId(current);
@@ -248,6 +256,17 @@ async function loadLocal() {
   toast("Loaded saved work.");
 }
 
+async function autoLoadLastProject() {
+  const raw = localStorage.getItem("mlTranslationWorkbench:last") || localStorage.getItem("mlTranslationWorkbench");
+  if (!raw) return;
+  try {
+    restore(JSON.parse(raw));
+    toast("Previous browser work restored.");
+  } catch {
+    // Ignore old or broken browser saves.
+  }
+}
+
 function download(filename, content, type) {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
@@ -270,7 +289,6 @@ function cleanImportedLine(line) {
   return line
     .replace(/\u00a0/g, " ")
     .replace(/[ÿþ�]{2,}/g, "")
-    .replace(/\t/g, "    ")
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
     .replace(/[ \t]+$/g, "");
 }
@@ -538,7 +556,7 @@ async function importIntoTarget(file, target) {
   }
 
   if (target === "english") {
-    englishPages = pages.map(cleanImportedWordText);
+    englishPages = pages.slice();
     englishLayouts = Array.isArray(file._extractedLayouts) ? file._extractedLayouts : [];
     setSourceViewer(file, pages);
     $("englishText").value = englishPages[currentPage - 1] || englishPages[0] || "";
@@ -551,7 +569,7 @@ async function importIntoTarget(file, target) {
       toast("Malayalam image added. OCR is needed to make image text editable.");
       return;
     }
-    malayalamPages = pages.map(cleanImportedWordText);
+    malayalamPages = pages.slice();
     if (!malayalamLayouts.length) malayalamLayouts = [];
     $("malayalamText").value = malayalamPages[currentPage - 1] || malayalamPages[0] || "";
     $("importStatus").textContent = `Malayalam loaded from ${file.name}: ${malayalamPages.length} page(s).`;
@@ -986,6 +1004,43 @@ async function translateSelection() {
   }
 }
 
+async function lookupGlossaryMeaning() {
+  const word = $("glossaryLookupInput").value.trim();
+  if (!word) {
+    toast("Type an English word first.");
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: word, target: "ml" })
+    });
+    if (!response.ok) throw new Error(await response.text());
+    const data = await response.json();
+    const meaning = data.translation?.trim();
+    if (!meaning) throw new Error("No Malayalam meaning returned.");
+    const current = $("glossaryInput").value.trimEnd();
+    $("glossaryInput").value = `${current}${current ? "\n" : ""}${word}=${meaning}`;
+    suggestWords();
+    toast("Malayalam meaning added to glossary.");
+  } catch {
+    window.open(`https://translate.google.com/?sl=en&tl=ml&text=${encodeURIComponent(word)}&op=translate`, "_blank");
+    toast("Opened Google Translate for Malayalam meaning.");
+  }
+}
+
+function openGoogleInputTools() {
+  window.open("https://www.google.com/inputtools/try/", "_blank");
+}
+
+function openGoogleTranslateMalayalam() {
+  const area = selectedTextarea();
+  const selected = area.value?.slice(area.selectionStart, area.selectionEnd) || "";
+  window.open(`https://translate.google.com/?sl=en&tl=ml&text=${encodeURIComponent(selected)}&op=translate`, "_blank");
+}
+
 function renderPreview() {
   $("printPreview").innerHTML = getEditedExportHtml() || "<p class=\"hint\">Print preview will appear here.</p>";
 }
@@ -1179,6 +1234,9 @@ function bindEvents() {
   $("saveCloudBtn").addEventListener("click", saveCloud);
   $("insertBsiBtn").addEventListener("click", placeBsiAtTop);
   $("applyGlossaryBtn").addEventListener("click", suggestWords);
+  $("lookupGlossaryBtn").addEventListener("click", lookupGlossaryMeaning);
+  $("googleInputToolsBtn").addEventListener("click", openGoogleInputTools);
+  $("googleTranslateBtn").addEventListener("click", openGoogleTranslateMalayalam);
   $("normalizeBtn").addEventListener("click", () => {
     saveEditHistory();
     $("finalText").value = normalizeReferences($("finalText").value);
@@ -1237,7 +1295,13 @@ function bindEvents() {
   $("bsiText")?.addEventListener("focus", saveEditHistory);
   stateKeys
     .filter((key) => key !== "englishText" && key !== "malayalamText")
-    .forEach((key) => $(key)?.addEventListener("input", renderPreview));
+    .forEach((key) => $(key)?.addEventListener("input", () => {
+      renderPreview();
+      scheduleAutoSave();
+    }));
+  document.addEventListener("input", (event) => {
+    if (event.target?.matches?.("textarea,input,select")) scheduleAutoSave();
+  });
 }
 
 function buildMalayalamKeyboard() {
@@ -1257,3 +1321,4 @@ applyMalayalamZoom(malayalamZoom);
 updatePageStatus();
 renderImageGallery();
 renderPreview();
+autoLoadLastProject();
