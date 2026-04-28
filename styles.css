@@ -97,6 +97,12 @@ textarea[lang="ml"] {
   z-index: 5;
 }
 
+.topbar > div:first-child {
+  flex: 1;
+  text-align: center;
+  padding-left: 220px;
+}
+
 .eyebrow {
   margin: 0 0 3px;
   color: var(--accent-2);
