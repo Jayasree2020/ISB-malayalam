@@ -102,11 +102,15 @@ salvation=രക്ഷ</textarea>
                 <textarea id="englishText" wrap="off" placeholder="Extracted English text appears here. You can also paste text manually."></textarea>
               </label>
             </section>
-            <div id="splitResizeHandle" class="split-resize-handle" role="separator" aria-label="Resize editing window" tabindex="0"></div>
+            <div id="splitResizeHandle" class="split-resize-handle" role="separator" aria-label="Drag to resize editing window" title="Drag left or right to resize" tabindex="0">
+              <span>||</span>
+            </div>
             <label class="editor-block">
               <span class="editor-title-row">
                 Editable Malayalam Translation
                 <span class="mode-buttons">
+                  <button id="widenEditorBtn" class="secondary" type="button">Widen</button>
+                  <button id="narrowEditorBtn" class="secondary" type="button">Narrow</button>
                   <button id="undoEditBtn" class="secondary" type="button">Undo</button>
                   <button id="redoEditBtn" class="secondary" type="button">Redo</button>
                   <button id="deleteSelectionBtn" class="secondary danger" type="button">Delete</button>
