@@ -39,12 +39,10 @@ const bookMap = {
 const mlDigits = ["൦", "൧", "൨", "൩", "൪", "൫", "൬", "൭", "൮", "൯"];
 const mlKeys = ["അ", "ആ", "ഇ", "ഈ", "ഉ", "ഊ", "എ", "ഏ", "ഐ", "ഒ", "ഓ", "ഔ", "ക", "ഖ", "ഗ", "ച", "ജ", "ട", "ഡ", "ണ", "ത", "ദ", "ന", "പ", "ബ", "മ", "യ", "ര", "ല", "വ", "ശ", "ഷ", "സ", "ഹ", "ള", "ഴ", "റ", "്", "ം", "ഃ"];
 
-let importedText = "";
-let importedPages = [];
-let importedFileName = "";
 let englishPages = [];
 let malayalamPages = [];
 let currentPage = 1;
+let isShowingPage = false;
 let localDbPromise;
 
 if (window.pdfjsLib) {
@@ -59,6 +57,7 @@ function toast(message) {
 }
 
 function snapshot() {
+  persistCurrentPageEdits();
   return {
     ...Object.fromEntries(stateKeys.map((key) => [key, $(key)?.value ?? ""])),
     englishPages,
@@ -200,6 +199,23 @@ async function extractPdfPages(file) {
   return pages;
 }
 
+async function extractDocxPages(file) {
+  if (!window.mammoth) {
+    throw new Error("Word reader is still loading. Please try again in a moment.");
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const result = await window.mammoth.extractRawText({ arrayBuffer });
+  return splitTextIntoPages(result.value || "");
+}
+
+async function extractFilePages(file) {
+  if (/\.pdf$/i.test(file.name)) return extractPdfPages(file);
+  if (/\.docx$/i.test(file.name)) return extractDocxPages(file);
+  if (/\.(txt|md|html)$/i.test(file.name)) return splitTextIntoPages(await file.text());
+  throw new Error("Please upload PDF, DOCX, TXT, MD, or HTML.");
+}
+
 function updatePageStatus() {
   const total = Math.max(englishPages.length, malayalamPages.length, 1);
   $("pageNumber").max = String(total);
@@ -208,30 +224,45 @@ function updatePageStatus() {
 }
 
 function showPage(pageNumber) {
+  persistCurrentPageEdits();
   const total = Math.max(englishPages.length, malayalamPages.length, 1);
   currentPage = Math.min(Math.max(Number(pageNumber) || 1, 1), total);
 
+  isShowingPage = true;
   if (englishPages.length) $("englishText").value = englishPages[currentPage - 1] || "";
   if (malayalamPages.length) $("malayalamText").value = malayalamPages[currentPage - 1] || "";
+  isShowingPage = false;
 
   updatePageStatus();
   renderPreview();
 }
 
-function useImportedPages(target) {
-  if (!importedPages.length) {
-    toast("Upload a PDF or text file first.");
-    return;
+function persistCurrentPageEdits() {
+  if (isShowingPage) return;
+  const index = currentPage - 1;
+  if (englishPages.length && index >= 0) englishPages[index] = $("englishText").value;
+  if (malayalamPages.length && index >= 0) malayalamPages[index] = $("malayalamText").value;
+}
+
+async function importIntoTarget(file, target) {
+  if (!file) return;
+  $("importStatus").textContent = `Reading ${file.name}...`;
+  const pages = await extractFilePages(file);
+
+  if (!pages.length) {
+    throw new Error("No selectable text was found. If this is a scanned PDF, OCR is needed.");
   }
 
   if (target === "english") {
-    englishPages = importedPages.slice();
+    englishPages = pages.slice();
     $("englishText").value = englishPages[currentPage - 1] || englishPages[0] || "";
-    toast(`English PDF/text loaded: ${englishPages.length} page(s).`);
+    $("importStatus").textContent = `English loaded from ${file.name}: ${englishPages.length} page(s).`;
+    toast(`English loaded: ${englishPages.length} page(s).`);
   } else {
-    malayalamPages = importedPages.slice();
+    malayalamPages = pages.slice();
     $("malayalamText").value = malayalamPages[currentPage - 1] || malayalamPages[0] || "";
-    toast(`Malayalam translation loaded: ${malayalamPages.length} page(s).`);
+    $("importStatus").textContent = `Malayalam loaded from ${file.name}: ${malayalamPages.length} page(s).`;
+    toast(`Malayalam loaded: ${malayalamPages.length} page(s).`);
   }
 
   showPage(currentPage);
@@ -419,47 +450,26 @@ function bindEvents() {
     });
   });
 
-  $("fileInput").addEventListener("change", async (event) => {
+  $("englishFileInput").addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-
-    importedFileName = file.name;
-    $("importStatus").textContent = `Reading ${file.name}...`;
-
     try {
-      if (/\.pdf$/i.test(file.name)) {
-        importedPages = await extractPdfPages(file);
-        importedText = importedPages.join("\n\n--- PAGE BREAK ---\n\n");
-        $("importStatus").textContent = `${file.name}: extracted ${importedPages.length} page(s). Choose English or Malayalam.`;
-        toast("PDF text extracted.");
-        return;
-      }
-
-      if (/\.(txt|md|html)$/i.test(file.name)) {
-        importedText = await file.text();
-        importedPages = splitTextIntoPages(importedText);
-        $("importStatus").textContent = `${file.name}: loaded ${importedPages.length} text page(s). Choose English or Malayalam.`;
-        toast("Text file imported.");
-        return;
-      }
-
-      importedText = "";
-      importedPages = [];
-      $("importStatus").textContent = "Word files need the next import module. For now, save as PDF or paste text.";
-      toast("Please upload PDF or text for page extraction.");
+      await importIntoTarget(file, "english");
     } catch (error) {
-      importedText = "";
-      importedPages = [];
-      $("importStatus").textContent = `Could not read ${file.name}: ${error.message}`;
-      toast("Import failed.");
+      $("importStatus").textContent = `Could not read English file: ${error.message}`;
+      toast("English import failed.");
     }
   });
 
-  $("useAsEnglishBtn").addEventListener("click", () => {
-    useImportedPages("english");
-  });
-  $("useAsMalayalamBtn").addEventListener("click", () => {
-    useImportedPages("malayalam");
+  $("malayalamFileInput").addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      await importIntoTarget(file, "malayalam");
+    } catch (error) {
+      $("importStatus").textContent = `Could not read Malayalam file: ${error.message}`;
+      toast("Malayalam import failed.");
+    }
   });
   $("prevPageBtn").addEventListener("click", () => showPage(currentPage - 1));
   $("nextPageBtn").addEventListener("click", () => showPage(currentPage + 1));
@@ -497,7 +507,17 @@ function bindEvents() {
   document.querySelectorAll("[data-wrap]").forEach((button) => {
     button.addEventListener("click", () => wrapSelection(button.dataset.wrap));
   });
-  stateKeys.forEach((key) => $(key)?.addEventListener("input", renderPreview));
+  $("englishText").addEventListener("input", () => {
+    persistCurrentPageEdits();
+    renderPreview();
+  });
+  $("malayalamText").addEventListener("input", () => {
+    persistCurrentPageEdits();
+    renderPreview();
+  });
+  stateKeys
+    .filter((key) => key !== "englishText" && key !== "malayalamText")
+    .forEach((key) => $(key)?.addEventListener("input", renderPreview));
 }
 
 function buildMalayalamKeyboard() {
