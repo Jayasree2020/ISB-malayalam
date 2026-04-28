@@ -895,10 +895,23 @@ function placeBsiAtTop() {
   persistCurrentPageEdits();
   saveEditHistory();
   const bsi = $("bsiText").value.trim();
-  const notes = $("malayalamText").value.trim();
-  $("finalText").value = [bsi, notes].filter(Boolean).join("\n\n");
+  if (!bsi) {
+    toast("BSI helper box is empty.");
+    return;
+  }
+  if (malayalamEditMode === "layout") {
+    addLayoutTextBlock();
+    const index = currentPage - 1;
+    const last = malayalamLayouts[index]?.lines?.at(-1);
+    if (last) last.text = bsi;
+    renderMalayalamLayout();
+  } else {
+    const current = $("malayalamText").value.trimEnd();
+    $("malayalamText").value = [bsi, current].filter(Boolean).join("\n\n");
+    persistCurrentPageEdits();
+  }
   renderPreview();
-  toast("BSI text placed above notes.");
+  toast("BSI text inserted into the Malayalam editor.");
 }
 
 function parseGlossary() {
@@ -990,11 +1003,9 @@ function renderRichText(raw) {
 
 function getEditedTextForExport() {
   persistCurrentPageEdits();
-  const bsi = $("bsiText").value.trim();
   const pageText = $("malayalamText").value.trimEnd();
   const finalText = $("finalText").value.trimEnd();
-  const body = pageText || finalText;
-  return [bsi, body].filter(Boolean).join("\n\n");
+  return pageText || finalText;
 }
 
 function layoutToHtml(layout) {
@@ -1015,12 +1026,10 @@ function layoutToHtml(layout) {
 
 function getEditedExportHtml() {
   persistCurrentPageEdits();
-  const bsi = $("bsiText").value.trim();
   const layout = malayalamLayouts[currentPage - 1];
   const hasLayout = layout?.lines?.length;
-  const bsiHtml = bsi ? `<section class="export-bsi">${renderRichText(bsi)}</section>` : "";
   if (hasLayout && malayalamEditMode === "layout") {
-    return `${bsiHtml}${layoutToHtml(layout)}`;
+    return layoutToHtml(layout);
   }
   return renderRichText(getEditedTextForExport());
 }
@@ -1031,7 +1040,6 @@ function getExportStyles() {
     p{margin:0 0 10px;white-space:pre-wrap}
     .verse-number{font-weight:bold;color:#a73f2b}
     .reference{font-style:italic}
-    .export-bsi{margin-bottom:18px}
     .export-layout-page{position:relative;margin:0 auto;background:#fff;page-break-after:always}
     .export-layout-block{position:absolute;white-space:pre-wrap;overflow-wrap:anywhere}
     .export-layout-table{position:absolute}
