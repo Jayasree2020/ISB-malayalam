@@ -19,6 +19,8 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 - Shows the original English source beside the editable Malayalam translation.
 - Keeps PDF files visible as PDFs, so the English page can be viewed as it is while Malayalam is edited.
 - Can copy the current English PDF page structure into an editable Malayalam page-layout editor.
+- Creates a blank page-format layout when the PDF is scanned or has no selectable text.
+- Adds manual text blocks and editable tables for layout correction.
 - Imports or pastes images, maps, and pictures, then shows them in the viewing/print preview.
 - Places licensed BSI Malayalam verse text at the top and translated notes below.
 - Inserts verse markers, reference markers, symbols, Malayalam characters, and glossary terms.
@@ -41,17 +43,19 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 4. The Malayalam page appears on the right in an editable Malayalam-font box.
 5. Edit the Malayalam box directly; edits are kept page by page while you navigate.
 6. Click `Copy Source Layout` when you want the Malayalam side to follow the current English page format.
-7. Use `Page Layout` mode to edit Malayalam in positioned blocks that follow the English page spacing, columns, and table-like line positions.
-8. Use `Previous`, `Next`, or the page number field to move through both documents together.
-9. Upload an image/map/picture in the Images area, or paste an image with `Ctrl+V`.
-10. The editor inserts an image marker; the viewing/print preview shows the actual image.
-11. Paste licensed BSI Malayalam Bible text in the BSI box.
-12. Click `Place at Top`.
-13. Use `Compose` to add verse numbers, references, symbols, glossary words, translation suggestions, and notes.
-14. Use `Normalize Text` to clean references and number style.
-15. Use `Run Checks` before export.
-16. Export Word/HTML/JSON and print to PDF.
-17. For final print layout, place the exported HTML in InDesign, or ask for ICML export once paragraph/character style names are finalized.
+7. If the PDF is scanned and no layout text is captured, the app creates a blank page layout instead of stopping.
+8. Use `Add Text Block` and `Add Table` to build the Malayalam page manually.
+9. Use `Page Layout` mode to edit Malayalam in positioned blocks that follow the English page spacing, columns, and table-like line positions.
+10. Use `Previous`, `Next`, or the page number field to move through both documents together.
+11. Upload an image/map/picture in the Images area, or paste an image with `Ctrl+V`.
+12. The editor inserts an image marker; the viewing/print preview shows the actual image.
+13. Paste licensed BSI Malayalam Bible text in the BSI box.
+14. Click `Place at Top`.
+15. Use `Compose` to add verse numbers, references, symbols, glossary words, translation suggestions, and notes.
+16. Use `Normalize Text` to clean references and number style.
+17. Use `Run Checks` before export.
+18. Export Word/HTML/JSON and print to PDF.
+19. For final print layout, place the exported HTML in InDesign, or ask for ICML export once paragraph/character style names are finalized.
 
 ## Project Structure
 
