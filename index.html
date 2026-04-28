@@ -44,7 +44,20 @@
             <button id="useAsEnglishBtn" type="button">Use as English</button>
             <button id="useAsMalayalamBtn" type="button">Use as Malayalam</button>
           </div>
-          <p class="hint">PDF and Word upload support can be expanded on Vercel. This starter reads plain text directly; paste extracted PDF/Word text below when needed.</p>
+          <p id="importStatus" class="hint">Upload an English PDF, then click Use as English. Upload the Malayalam translation PDF or text, then click Use as Malayalam.</p>
+        </section>
+
+        <section>
+          <h2>Page Match</h2>
+          <div class="button-row">
+            <button id="prevPageBtn" type="button">Previous</button>
+            <button id="nextPageBtn" type="button">Next</button>
+          </div>
+          <label>
+            Page
+            <input id="pageNumber" type="number" min="1" value="1" />
+          </label>
+          <p id="pageStatus" class="hint">Page 1 of 1.</p>
         </section>
 
         <section>
@@ -164,6 +177,7 @@ salvation=രക്ഷ</textarea>
     </main>
 
     <div id="toast" role="status" aria-live="polite"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
