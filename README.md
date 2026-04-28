@@ -38,6 +38,9 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 - Saves locally in the browser with no setup, using IndexedDB with a localStorage fallback.
 - Saves to a Vercel-managed Neon Postgres database after Vercel storage is connected.
 - Opens Google Translate fallback when API keys are not configured.
+- Gives Malayalam glossary meanings for English words using the translate API when configured, with Google Translate fallback.
+- Auto-saves browser work and restores the previous browser work on reopen.
+- Includes quick links to Google Malayalam typing/Input Tools and Google Translate.
 - Exports:
   - Word-compatible `.doc`
   - HTML for InDesign placement
@@ -65,6 +68,14 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 16. Use `Run Checks` before export.
 17. Export Word/HTML/InDesign Tagged Text/JSON, or print to PDF.
 18. For final print layout, place the exported HTML or Tagged Text in InDesign.
+
+## Notes On Your Latest Requirements
+
+- Glossary: type an English word in `English word meaning` and click `Find Malayalam Meaning`.
+- Browser save: the app auto-saves and restores the latest browser work when reopened.
+- Malayalam typing: use the Malayalam editor directly, the built-in Malayalam character buttons, or the `Google Malayalam Typing` button.
+- Word import: DOCX/RTF/PDF are most reliable. Legacy `.doc` is best effort; if text is missing, save the file as `.docx` or PDF and upload again.
+- Google എഴുത്ത് ഉപകരണങ്ങൾ: use the `Google Malayalam Typing` button in the Malayalam Typing panel.
 
 ## Project Structure
 
