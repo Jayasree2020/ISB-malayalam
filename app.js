@@ -55,6 +55,7 @@ let selectedLayoutBlock = null;
 let undoStack = [];
 let redoStack = [];
 let suppressHistory = false;
+let splitSourceWidth = Number(localStorage.getItem("mlTranslationWorkbench:sourceWidth") || 50);
 
 if (window.pdfjsLib) {
   window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -65,6 +66,13 @@ function toast(message) {
   box.textContent = message;
   box.classList.add("show");
   setTimeout(() => box.classList.remove("show"), 2400);
+}
+
+function applySplitWidth(value) {
+  splitSourceWidth = Math.min(Math.max(Number(value) || 50, 25), 72);
+  $("sourceSplit")?.style.setProperty("--source-width", `${splitSourceWidth}%`);
+  localStorage.setItem("mlTranslationWorkbench:sourceWidth", String(splitSourceWidth));
+  renderMalayalamLayout();
 }
 
 function snapshot() {
@@ -1103,6 +1111,35 @@ function bindEvents() {
     const file = imageItem.getAsFile();
     if (file) await addImageFile(file);
   });
+  const resizeHandle = $("splitResizeHandle");
+  resizeHandle?.addEventListener("pointerdown", (event) => {
+    const split = $("sourceSplit");
+    if (!split) return;
+    resizeHandle.setPointerCapture(event.pointerId);
+    const rect = split.getBoundingClientRect();
+    const onMove = (moveEvent) => {
+      const percent = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+      applySplitWidth(percent);
+    };
+    const onUp = () => {
+      resizeHandle.removeEventListener("pointermove", onMove);
+      resizeHandle.removeEventListener("pointerup", onUp);
+      resizeHandle.removeEventListener("pointercancel", onUp);
+    };
+    resizeHandle.addEventListener("pointermove", onMove);
+    resizeHandle.addEventListener("pointerup", onUp);
+    resizeHandle.addEventListener("pointercancel", onUp);
+  });
+  resizeHandle?.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      applySplitWidth(splitSourceWidth - 3);
+    }
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      applySplitWidth(splitSourceWidth + 3);
+    }
+  });
   $("prevPageBtn").addEventListener("click", () => showPage(currentPage - 1));
   $("nextPageBtn").addEventListener("click", () => showPage(currentPage + 1));
   $("pageNumber").addEventListener("change", () => showPage($("pageNumber").value));
@@ -1201,6 +1238,7 @@ function buildMalayalamKeyboard() {
 
 buildMalayalamKeyboard();
 bindEvents();
+applySplitWidth(splitSourceWidth);
 updatePageStatus();
 renderImageGallery();
 renderPreview();
