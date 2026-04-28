@@ -334,6 +334,7 @@ body.resizing-columns {
   border-radius: 6px;
   background: #f3f1ea;
   padding: 12px;
+  font-size: var(--malayalam-editor-font-size, 16px);
 }
 
 .layout-editor.hidden,
@@ -358,7 +359,7 @@ body.resizing-columns {
   color: var(--ink);
   background: rgba(255, 255, 255, 0.72);
   font-family: "MLW-TTKarthika", "Karthika", "Kartika", "Nirmala UI", "Rachana", "AnjaliOldLipi", serif;
-  font-size: 14px;
+  font-size: var(--malayalam-layout-font-size, 14px);
   line-height: 1.25;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -404,7 +405,7 @@ body.resizing-columns {
   width: 100%;
   border-collapse: collapse;
   font-family: "MLW-TTKarthika", "Karthika", "Kartika", "Nirmala UI", "Rachana", "AnjaliOldLipi", serif;
-  font-size: 13px;
+  font-size: var(--malayalam-table-font-size, 13px);
 }
 
 .layout-table td {
