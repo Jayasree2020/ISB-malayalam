@@ -204,9 +204,11 @@ h2 {
 
 .split {
   display: grid;
-  grid-template-columns: minmax(220px, var(--source-width, 50%)) 18px minmax(280px, 1fr);
-  gap: 6px;
+  grid-template-columns: 1fr;
+  grid-template-rows: minmax(280px, 42vh) minmax(380px, 1fr);
+  gap: 12px;
   height: calc(100vh - 150px);
+  overflow: auto;
 }
 
 .split-resize-handle {
@@ -236,11 +238,6 @@ h2 {
   outline: none;
 }
 
-body.resizing-columns {
-  cursor: col-resize;
-  user-select: none;
-}
-
 .viewer-block {
   display: grid;
   grid-template-rows: auto minmax(260px, 1fr) auto;
@@ -259,7 +256,7 @@ body.resizing-columns {
 }
 
 .source-viewer {
-  min-height: 360px;
+  min-height: 260px;
   height: 100%;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -319,7 +316,7 @@ body.resizing-columns {
 
 .editor-block textarea {
   height: 100%;
-  min-height: 360px;
+  min-height: 380px;
   font-size: 16px;
   line-height: 1.35;
 }
@@ -327,7 +324,7 @@ body.resizing-columns {
 .layout-editor {
   position: relative;
   width: 100%;
-  min-height: 640px;
+  min-height: 420px;
   height: 100%;
   overflow: auto;
   border: 1px solid var(--line);
