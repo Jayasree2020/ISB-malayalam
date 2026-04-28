@@ -1115,21 +1115,25 @@ function bindEvents() {
   resizeHandle?.addEventListener("pointerdown", (event) => {
     const split = $("sourceSplit");
     if (!split) return;
+    event.preventDefault();
     resizeHandle.setPointerCapture(event.pointerId);
-    const rect = split.getBoundingClientRect();
+    document.body.classList.add("resizing-columns");
     const onMove = (moveEvent) => {
+      const rect = split.getBoundingClientRect();
       const percent = ((moveEvent.clientX - rect.left) / rect.width) * 100;
       applySplitWidth(percent);
     };
     const onUp = () => {
-      resizeHandle.removeEventListener("pointermove", onMove);
-      resizeHandle.removeEventListener("pointerup", onUp);
-      resizeHandle.removeEventListener("pointercancel", onUp);
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      document.removeEventListener("pointercancel", onUp);
+      document.body.classList.remove("resizing-columns");
     };
-    resizeHandle.addEventListener("pointermove", onMove);
-    resizeHandle.addEventListener("pointerup", onUp);
-    resizeHandle.addEventListener("pointercancel", onUp);
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+    document.addEventListener("pointercancel", onUp);
   });
+  resizeHandle?.addEventListener("dblclick", () => applySplitWidth(50));
   resizeHandle?.addEventListener("keydown", (event) => {
     if (event.key === "ArrowLeft") {
       event.preventDefault();
@@ -1140,6 +1144,8 @@ function bindEvents() {
       applySplitWidth(splitSourceWidth + 3);
     }
   });
+  $("widenEditorBtn").addEventListener("click", () => applySplitWidth(splitSourceWidth - 5));
+  $("narrowEditorBtn").addEventListener("click", () => applySplitWidth(splitSourceWidth + 5));
   $("prevPageBtn").addEventListener("click", () => showPage(currentPage - 1));
   $("nextPageBtn").addEventListener("click", () => showPage(currentPage + 1));
   $("pageNumber").addEventListener("change", () => showPage($("pageNumber").value));
