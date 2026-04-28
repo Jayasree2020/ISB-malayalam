@@ -16,7 +16,8 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 
 - Stores project title, section reference, editor name, English source, Malayalam translation, BSI verse text, final print body, glossary, and editor notes.
 - Extracts text from uploaded PDF and DOCX files page by page in the browser.
-- Shows the English page and the matching Malayalam page side by side in editable boxes.
+- Shows the original English source beside the editable Malayalam translation.
+- Keeps PDF files visible as PDFs, so the English page can be viewed as it is while Malayalam is edited.
 - Imports or pastes images, maps, and pictures, then shows them in the viewing/print preview.
 - Places licensed BSI Malayalam verse text at the top and translated notes below.
 - Inserts verse markers, reference markers, symbols, Malayalam characters, and glossary terms.
@@ -33,20 +34,21 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 
 ## Suggested Editorial Workflow
 
-1. Upload the English PDF/DOCX/text file in the English file box.
-2. Upload the Malayalam PDF/DOCX/text file in the Malayalam file box.
-3. The current English page appears in the English editor, and the matching Malayalam page appears in the Malayalam-font editor.
-4. Edit either box directly; edits are kept page by page while you navigate.
-5. Use `Previous`, `Next`, or the page number field to move through both documents together.
-6. Upload an image/map/picture in the Images area, or paste an image with `Ctrl+V`.
-7. The editor inserts an image marker; the viewing/print preview shows the actual image.
-8. Paste licensed BSI Malayalam Bible text in the BSI box.
-9. Click `Place at Top`.
-10. Use `Compose` to add verse numbers, references, symbols, glossary words, translation suggestions, and notes.
-11. Use `Normalize Text` to clean references and number style.
-12. Use `Run Checks` before export.
-13. Export Word/HTML/JSON and print to PDF.
-14. For final print layout, place the exported HTML in InDesign, or ask for ICML export once paragraph/character style names are finalized.
+1. Upload the English PDF/DOCX/image/text file in the English file box.
+2. The original English source appears on the left. PDFs are shown as PDFs, not only extracted text.
+3. Upload the Malayalam PDF/DOCX/text file in the Malayalam file box, or paste/type Malayalam directly.
+4. The Malayalam page appears on the right in an editable Malayalam-font box.
+5. Edit the Malayalam box directly; edits are kept page by page while you navigate.
+6. Use `Previous`, `Next`, or the page number field to move through both documents together.
+7. Upload an image/map/picture in the Images area, or paste an image with `Ctrl+V`.
+8. The editor inserts an image marker; the viewing/print preview shows the actual image.
+9. Paste licensed BSI Malayalam Bible text in the BSI box.
+10. Click `Place at Top`.
+11. Use `Compose` to add verse numbers, references, symbols, glossary words, translation suggestions, and notes.
+12. Use `Normalize Text` to clean references and number style.
+13. Use `Run Checks` before export.
+14. Export Word/HTML/JSON and print to PDF.
+15. For final print layout, place the exported HTML in InDesign, or ask for ICML export once paragraph/character style names are finalized.
 
 ## Project Structure
 
