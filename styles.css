@@ -191,6 +191,57 @@ h2 {
   height: calc(100vh - 150px);
 }
 
+.viewer-block {
+  display: grid;
+  grid-template-rows: auto minmax(260px, 1fr) auto;
+  gap: 8px;
+  min-height: 0;
+}
+
+.viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.source-viewer {
+  min-height: 360px;
+  height: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f7f8f5;
+  overflow: auto;
+}
+
+.source-viewer iframe,
+.source-viewer img {
+  width: 100%;
+  min-height: 100%;
+  display: block;
+  border: 0;
+}
+
+.source-viewer img {
+  height: auto;
+  min-height: auto;
+}
+
+.source-text-view {
+  margin: 0;
+  padding: 14px;
+  white-space: pre-wrap;
+  font-family: "Nirmala UI", "Kartika", "Segoe UI", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.editor-block.collapsed {
+  display: none;
+}
+
 .editor-block {
   height: 100%;
 }
