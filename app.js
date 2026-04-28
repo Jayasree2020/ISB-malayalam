@@ -925,9 +925,12 @@ async function translateSelection() {
 }
 
 function renderPreview() {
-  const raw = $("finalText").value || "";
+  $("printPreview").innerHTML = getEditedExportHtml() || "<p class=\"hint\">Print preview will appear here.</p>";
+}
+
+function renderRichText(raw) {
   const imageMap = Object.fromEntries(imageAssets.map((asset) => [asset.id, asset]));
-  const html = escapeHtml(raw)
+  return escapeHtml(raw)
     .replace(/\[v\s+([^\]]+)\]/g, '<span class="verse-number">$1</span>')
     .replace(/\[ref\s+([^\]]+)\]/g, '<span class="reference">$1</span>')
     .replace(/\[image\s+([^\]\s]+)(?:\s+([^\]]+))?\]/g, (match, id, caption) => {
@@ -942,11 +945,63 @@ function renderPreview() {
       return content.includes('class="print-image"') ? content : `<p class="verse-line">${content}</p>`;
     })
     .join("");
-  $("printPreview").innerHTML = html || "<p class=\"hint\">Print preview will appear here.</p>";
+}
+
+function getEditedTextForExport() {
+  persistCurrentPageEdits();
+  const bsi = $("bsiText").value.trim();
+  const pageText = $("malayalamText").value.trimEnd();
+  const finalText = $("finalText").value.trimEnd();
+  const body = pageText || finalText;
+  return [bsi, body].filter(Boolean).join("\n\n");
+}
+
+function layoutToHtml(layout) {
+  const width = Math.round(layout.width || 612);
+  const height = Math.round(layout.height || 792);
+  const blocks = (layout.lines || []).map((line) => {
+    const left = `${(line.x || 0) * 100}%`;
+    const top = `${(line.y || 0) * 100}%`;
+    const blockWidth = `${Math.max(line.width || 0.2, 0.05) * 100}%`;
+    const minHeight = `${Math.max(line.height || 0.025, 0.02) * 100}%`;
+    if (line.type === "table") {
+      return `<div class="export-layout-table" style="left:${left};top:${top};width:${blockWidth};min-height:${minHeight};">${line.html || tableHtml(3, 3)}</div>`;
+    }
+    return `<div class="export-layout-block" style="left:${left};top:${top};width:${blockWidth};min-height:${minHeight};">${renderRichText(line.text || "")}</div>`;
+  }).join("");
+  return `<section class="export-layout-page" style="width:${width}px;min-height:${height}px;">${blocks}</section>`;
+}
+
+function getEditedExportHtml() {
+  persistCurrentPageEdits();
+  const bsi = $("bsiText").value.trim();
+  const layout = malayalamLayouts[currentPage - 1];
+  const hasLayout = layout?.lines?.length;
+  const bsiHtml = bsi ? `<section class="export-bsi">${renderRichText(bsi)}</section>` : "";
+  if (hasLayout && malayalamEditMode === "layout") {
+    return `${bsiHtml}${layoutToHtml(layout)}`;
+  }
+  return renderRichText(getEditedTextForExport());
+}
+
+function getExportStyles() {
+  return `
+    body{font-family:"MLW-TTKarthika","Karthika","Kartika","Nirmala UI",serif;font-size:14pt;line-height:1.35;color:#17211c}
+    p{margin:0 0 10px;white-space:pre-wrap}
+    .verse-number{font-weight:bold;color:#a73f2b}
+    .reference{font-style:italic}
+    .export-bsi{margin-bottom:18px}
+    .export-layout-page{position:relative;margin:0 auto;background:#fff;page-break-after:always}
+    .export-layout-block{position:absolute;white-space:pre-wrap;overflow-wrap:anywhere}
+    .export-layout-table{position:absolute}
+    .export-layout-table table{width:100%;border-collapse:collapse}
+    .export-layout-table td{border:1px solid #888;padding:4px;vertical-align:top}
+    .print-image img{max-width:100%;height:auto}
+  `;
 }
 
 function runChecks() {
-  const text = $("finalText").value;
+  const text = getEditedTextForExport();
   const checks = [
     text.trim() ? "Final body has content." : "Final body is empty.",
     /\[v\s+/.test(text) ? "Verse markers found." : "No verse markers found.",
@@ -961,15 +1016,25 @@ function runChecks() {
 function exportHtml() {
   persistCurrentPageEdits();
   const data = snapshot();
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(data.projectTitle)}</title><style>body{font-family:"Nirmala UI","Kartika",serif;font-size:14pt;line-height:1.7}.verse-number{font-weight:bold;color:#a73f2b}</style></head><body>${$("printPreview").innerHTML}</body></html>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(data.projectTitle)}</title><style>${getExportStyles()}</style></head><body>${getEditedExportHtml()}</body></html>`;
   download(`${data.projectTitle || "translation"}-indesign.html`, html, "text/html;charset=utf-8");
 }
 
 function exportDoc() {
   persistCurrentPageEdits();
   const data = snapshot();
-  const doc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${escapeHtml(data.projectTitle)}</title></head><body>${$("printPreview").innerHTML}</body></html>`;
+  const doc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${escapeHtml(data.projectTitle)}</title><style>${getExportStyles()}</style></head><body>${getEditedExportHtml()}</body></html>`;
   download(`${data.projectTitle || "translation"}.doc`, doc, "application/msword;charset=utf-8");
+}
+
+function exportTaggedText() {
+  persistCurrentPageEdits();
+  const data = snapshot();
+  const text = getEditedTextForExport()
+    .replace(/\[v\s+([^\]]+)\]/g, "<CharStyle:VerseNumber>$1<CharStyle:>")
+    .replace(/\[ref\s+([^\]]+)\]/g, "<CharStyle:BibleReference>$1<CharStyle:>");
+  const tagged = `<ASCII-WIN>\n<Version:18.0>\n<ParaStyle:MalayalamBody>\n${text.replace(/\n{2,}/g, "\n<ParaStyle:MalayalamBody>\n")}`;
+  download(`${data.projectTitle || "translation"}-indesign-tagged.txt`, tagged, "text/plain;charset=utf-8");
 }
 
 function exportJson() {
@@ -1078,6 +1143,7 @@ function bindEvents() {
   $("translateSelectionBtn").addEventListener("click", translateSelection);
   $("exportHtmlBtn").addEventListener("click", exportHtml);
   $("exportDocBtn").addEventListener("click", exportDoc);
+  $("exportTaggedTextBtn").addEventListener("click", exportTaggedText);
   $("exportJsonBtn").addEventListener("click", exportJson);
   $("printPdfBtn").addEventListener("click", () => {
     renderPreview();
