@@ -1,0 +1,395 @@
+const $ = (id) => document.getElementById(id);
+
+const stateKeys = [
+  "projectTitle",
+  "sectionRef",
+  "editorName",
+  "englishText",
+  "malayalamText",
+  "bsiText",
+  "finalText",
+  "editorNotes",
+  "glossaryInput",
+  "bookStyle",
+  "numberStyle"
+];
+
+const bookMap = {
+  Genesis: "ഉല്പത്തി",
+  Gen: "ഉല്പ",
+  Exodus: "പുറപ്പാട്",
+  Exod: "പുറ",
+  Matthew: "മത്തായി",
+  Matt: "മത്താ",
+  Mark: "മർക്കോസ്",
+  Luke: "ലൂക്കോസ്",
+  John: "യോഹന്നാൻ",
+  Acts: "പ്രവൃത്തികൾ",
+  Romans: "റോമർ",
+  Rom: "റോമ",
+  Corinthians: "കൊരിന്ത്യർ",
+  Cor: "കൊരി",
+  Psalms: "സങ്കീർത്തനങ്ങൾ",
+  Psalm: "സങ്കീ",
+  Ps: "സങ്കീ",
+  Revelation: "വെളിപ്പാട്",
+  Rev: "വെളി"
+};
+
+const mlDigits = ["൦", "൧", "൨", "൩", "൪", "൫", "൬", "൭", "൮", "൯"];
+const mlKeys = ["അ", "ആ", "ഇ", "ഈ", "ഉ", "ഊ", "എ", "ഏ", "ഐ", "ഒ", "ഓ", "ഔ", "ക", "ഖ", "ഗ", "ച", "ജ", "ട", "ഡ", "ണ", "ത", "ദ", "ന", "പ", "ബ", "മ", "യ", "ര", "ല", "വ", "ശ", "ഷ", "സ", "ഹ", "ള", "ഴ", "റ", "്", "ം", "ഃ"];
+
+let importedText = "";
+let localDbPromise;
+
+function toast(message) {
+  const box = $("toast");
+  box.textContent = message;
+  box.classList.add("show");
+  setTimeout(() => box.classList.remove("show"), 2400);
+}
+
+function snapshot() {
+  return Object.fromEntries(stateKeys.map((key) => [key, $(key)?.value ?? ""]));
+}
+
+function localProjectId(data) {
+  const title = data.projectTitle || "Malayalam Translation Project";
+  const section = data.sectionRef || "main";
+  return `${title}::${section}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function openLocalDb() {
+  if (!("indexedDB" in window)) return Promise.resolve(null);
+  if (localDbPromise) return localDbPromise;
+
+  localDbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open("malayalamTranslationWorkbench", 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains("projects")) {
+        db.createObjectStore("projects", { keyPath: "id" });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+
+  return localDbPromise;
+}
+
+function restore(data) {
+  stateKeys.forEach((key) => {
+    if ($(key) && data[key] !== undefined) $(key).value = data[key];
+  });
+  renderPreview();
+}
+
+async function saveLocal() {
+  const data = snapshot();
+  const record = { ...data, id: localProjectId(data), updatedAt: new Date().toISOString() };
+  const db = await openLocalDb();
+
+  if (db) {
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction("projects", "readwrite");
+      transaction.objectStore("projects").put(record);
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  localStorage.setItem("mlTranslationWorkbench:last", JSON.stringify(record));
+  toast("Saved in this browser.");
+}
+
+async function loadLocal() {
+  const current = snapshot();
+  const id = localProjectId(current);
+  const db = await openLocalDb();
+  let record = null;
+
+  if (db) {
+    record = await new Promise((resolve, reject) => {
+      const transaction = db.transaction("projects", "readonly");
+      const request = transaction.objectStore("projects").get(id);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  if (!record) {
+    const raw = localStorage.getItem("mlTranslationWorkbench:last") || localStorage.getItem("mlTranslationWorkbench");
+    if (!raw) {
+      toast("No browser save found yet.");
+      return;
+    }
+    record = JSON.parse(raw);
+  }
+
+  restore(record);
+  toast("Loaded saved work.");
+}
+
+function download(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function escapeHtml(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function toMalayalamDigits(value) {
+  return value.replace(/\d/g, (digit) => mlDigits[Number(digit)]);
+}
+
+function normalizeReferences(text) {
+  let output = text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/[ \t]+/g, " ").replace(/\s([,.;:])/g, "$1").trim())
+    .join("\n");
+  if ($("bookStyle").value === "malayalam") {
+    Object.entries(bookMap).forEach(([en, ml]) => {
+      output = output.replace(new RegExp(`\\b${en}\\.?\\b`, "gi"), ml);
+    });
+  }
+  output = output.replace(/(\d+)\s*:\s*(\d+)/g, "$1:$2");
+  output = output.replace(/(\d+)\s*-\s*(\d+)/g, "$1-$2");
+  if ($("numberStyle").value === "malayalam") output = toMalayalamDigits(output);
+  return output.trim();
+}
+
+function selectedTextarea() {
+  const active = document.activeElement;
+  return active && active.tagName === "TEXTAREA" ? active : $("finalText");
+}
+
+function insertText(value) {
+  const area = selectedTextarea();
+  const start = area.selectionStart;
+  const end = area.selectionEnd;
+  area.value = area.value.slice(0, start) + value + area.value.slice(end);
+  area.focus();
+  area.selectionStart = area.selectionEnd = start + value.length;
+  renderPreview();
+}
+
+function wrapSelection(kind) {
+  const area = selectedTextarea();
+  const start = area.selectionStart;
+  const end = area.selectionEnd;
+  const selected = area.value.slice(start, end) || (kind === "verse" ? "1" : "John 3:16");
+  const value = kind === "verse" ? `[v ${selected}]` : `[ref ${selected}]`;
+  area.value = area.value.slice(0, start) + value + area.value.slice(end);
+  area.focus();
+  renderPreview();
+}
+
+function splitVerses() {
+  $("finalText").value = $("finalText").value.replace(/\s*(\d+)\s+/g, "\n[v $1] ");
+  renderPreview();
+  toast("Verse markers added where numbers were found.");
+}
+
+function placeBsiAtTop() {
+  const bsi = $("bsiText").value.trim();
+  const notes = $("malayalamText").value.trim();
+  $("finalText").value = [bsi, notes].filter(Boolean).join("\n\n");
+  renderPreview();
+  toast("BSI text placed above notes.");
+}
+
+function parseGlossary() {
+  return $("glossaryInput").value
+    .split(/\r?\n/)
+    .map((line) => line.split("="))
+    .filter((parts) => parts.length === 2)
+    .map(([source, target]) => ({ source: source.trim(), target: target.trim() }))
+    .filter((item) => item.source && item.target);
+}
+
+function suggestWords() {
+  const english = $("englishText").value.toLowerCase();
+  const suggestions = parseGlossary().filter((item) => english.includes(item.source.toLowerCase()));
+  const box = $("suggestions");
+  box.innerHTML = "";
+  suggestions.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "suggestion";
+    row.innerHTML = `<span>${escapeHtml(item.source)} → <strong lang="ml">${escapeHtml(item.target)}</strong></span>`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "Insert";
+    btn.addEventListener("click", () => insertText(item.target));
+    row.appendChild(btn);
+    box.appendChild(row);
+  });
+  if (!suggestions.length) box.textContent = "No glossary matches found in English text.";
+}
+
+async function saveCloud() {
+  try {
+    const response = await fetch("/api/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(snapshot())
+    });
+    if (!response.ok) throw new Error(await response.text());
+    toast("Saved to cloud database.");
+  } catch (error) {
+    toast("Cloud save needs Vercel storage connected. Browser save still works.");
+  }
+}
+
+async function translateSelection() {
+  const area = selectedTextarea();
+  const selected = area.value.slice(area.selectionStart, area.selectionEnd);
+  if (!selected) {
+    toast("Select text to translate first.");
+    return;
+  }
+  try {
+    const response = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: selected, target: "ml" })
+    });
+    if (!response.ok) throw new Error(await response.text());
+    const data = await response.json();
+    insertText(data.translation);
+  } catch (error) {
+    window.open(`https://translate.google.com/?sl=en&tl=ml&text=${encodeURIComponent(selected)}&op=translate`, "_blank");
+    toast("Opened Google Translate. Add API keys for in-app translation.");
+  }
+}
+
+function renderPreview() {
+  const raw = $("finalText").value || "";
+  const html = escapeHtml(raw)
+    .replace(/\[v\s+([^\]]+)\]/g, '<span class="verse-number">$1</span>')
+    .replace(/\[ref\s+([^\]]+)\]/g, '<span class="reference">$1</span>')
+    .split(/\n{2,}/)
+    .map((para) => `<p class="verse-line">${para.replace(/\n/g, "<br>")}</p>`)
+    .join("");
+  $("printPreview").innerHTML = html || "<p class=\"hint\">Print preview will appear here.</p>";
+}
+
+function runChecks() {
+  const text = $("finalText").value;
+  const checks = [
+    text.trim() ? "Final body has content." : "Final body is empty.",
+    /\[v\s+/.test(text) ? "Verse markers found." : "No verse markers found.",
+    /\[ref\s+/.test(text) ? "Reference markers found." : "No reference markers found.",
+    /[A-Za-z]{3,}\s+\d+:\d+/.test(text) ? "English references may still need Malayalam formatting." : "No obvious English references found.",
+    $("bsiText").value.trim() ? "BSI top text area has content." : "BSI text area is empty."
+  ];
+  $("checkList").innerHTML = checks.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  toast("Checks completed.");
+}
+
+function exportHtml() {
+  const data = snapshot();
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(data.projectTitle)}</title><style>body{font-family:"Nirmala UI","Kartika",serif;font-size:14pt;line-height:1.7}.verse-number{font-weight:bold;color:#a73f2b}</style></head><body>${$("printPreview").innerHTML}</body></html>`;
+  download(`${data.projectTitle || "translation"}-indesign.html`, html, "text/html;charset=utf-8");
+}
+
+function exportDoc() {
+  const data = snapshot();
+  const doc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${escapeHtml(data.projectTitle)}</title></head><body>${$("printPreview").innerHTML}</body></html>`;
+  download(`${data.projectTitle || "translation"}.doc`, doc, "application/msword;charset=utf-8");
+}
+
+function exportJson() {
+  download(`${$("projectTitle").value || "translation"}-archive.json`, JSON.stringify(snapshot(), null, 2), "application/json;charset=utf-8");
+}
+
+function bindEvents() {
+  document.querySelectorAll(".tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".tab, .view").forEach((el) => el.classList.remove("active"));
+      tab.classList.add("active");
+      $(`${tab.dataset.view}View`).classList.add("active");
+      renderPreview();
+    });
+  });
+
+  $("fileInput").addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (!/\.(txt|md|html)$/i.test(file.name)) {
+      importedText = "";
+      toast("For PDF/Word in this starter, paste extracted text into the editor.");
+      return;
+    }
+    importedText = await file.text();
+    toast("Text file imported. Choose where to place it.");
+  });
+
+  $("useAsEnglishBtn").addEventListener("click", () => {
+    $("englishText").value = importedText || $("englishText").value;
+    renderPreview();
+  });
+  $("useAsMalayalamBtn").addEventListener("click", () => {
+    $("malayalamText").value = importedText || $("malayalamText").value;
+    renderPreview();
+  });
+
+  $("saveLocalBtn").addEventListener("click", saveLocal);
+  $("loadLocalBtn").addEventListener("click", loadLocal);
+  $("saveCloudBtn").addEventListener("click", saveCloud);
+  $("insertBsiBtn").addEventListener("click", placeBsiAtTop);
+  $("applyGlossaryBtn").addEventListener("click", suggestWords);
+  $("normalizeBtn").addEventListener("click", () => {
+    $("finalText").value = normalizeReferences($("finalText").value);
+    renderPreview();
+    toast("Text normalized.");
+  });
+  $("cleanRefsBtn").addEventListener("click", () => {
+    const area = selectedTextarea();
+    area.value = normalizeReferences(area.value);
+    renderPreview();
+  });
+  $("splitVersesBtn").addEventListener("click", splitVerses);
+  $("translateSelectionBtn").addEventListener("click", translateSelection);
+  $("exportHtmlBtn").addEventListener("click", exportHtml);
+  $("exportDocBtn").addEventListener("click", exportDoc);
+  $("exportJsonBtn").addEventListener("click", exportJson);
+  $("printPdfBtn").addEventListener("click", () => {
+    renderPreview();
+    window.print();
+  });
+  $("runChecksBtn").addEventListener("click", runChecks);
+
+  document.querySelectorAll("[data-insert]").forEach((button) => {
+    button.addEventListener("click", () => insertText(button.dataset.insert));
+  });
+  document.querySelectorAll("[data-wrap]").forEach((button) => {
+    button.addEventListener("click", () => wrapSelection(button.dataset.wrap));
+  });
+  stateKeys.forEach((key) => $(key)?.addEventListener("input", renderPreview));
+}
+
+function buildMalayalamKeyboard() {
+  const box = $("malayalamKeys");
+  mlKeys.forEach((char) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = char;
+    button.addEventListener("click", () => insertText(char));
+    box.appendChild(button);
+  });
+}
+
+buildMalayalamKeyboard();
+bindEvents();
+renderPreview();
