@@ -318,13 +318,13 @@ function splitTextIntoPages(text) {
 function cleanImportedLine(line) {
   return line
     .replace(/\u00a0/g, " ")
-    .replace(/[ÿþ�]{2,}/g, "")
+    .replace(/[\u00ff\u00fe\ufffd]{2,}/g, "")
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
     .replace(/[ \t]+$/g, "");
 }
 
 function repairMalayalamMojibake(value) {
-  if (!/[àÂÃ][\u0080-\u00ff]|à´|àµ|Â/.test(value)) return value;
+  if (!/[\u00e0\u00c2\u00c3][\u0080-\u00ff]|\u00e0\u00b4|\u00e0\u00b5|\u00c2/.test(value)) return value;
   try {
     const bytes = Uint8Array.from(Array.from(value, (char) => char.charCodeAt(0) & 0xff));
     const decoded = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
@@ -340,7 +340,7 @@ function cleanImportedWordText(text) {
   return repairMalayalamMojibake(text)
     .replace(/\r\n?/g, "\n")
     .replace(/\u00a0/g, " ")
-    .replace(/[ÿþ�]{2,}/g, "")
+    .replace(/[\u00ff\u00fe\ufffd]{2,}/g, "")
     .split("\n")
     .map(cleanImportedLine)
     .join("\n")
@@ -352,7 +352,7 @@ function readableTextScore(text) {
   const cleaned = text.replace(/\s/g, "");
   if (!cleaned.length) return 0;
   const readable = (cleaned.match(/[\p{L}\p{N}\u0D00-\u0D7F.,;:!?()[\]\-]/gu) || []).length;
-  const junk = (cleaned.match(/[ÿþ�]/g) || []).length;
+  const junk = (cleaned.match(/[\u00ff\u00fe\ufffd]/g) || []).length;
   return (readable - junk * 3) / cleaned.length;
 }
 
