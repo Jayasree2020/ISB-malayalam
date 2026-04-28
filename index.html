@@ -22,19 +22,13 @@
     <main class="workspace">
       <aside class="panel import-panel">
         <section>
-          <h2>Project</h2>
+          <h2>BSI Verse Text</h2>
           <label>
-            Title
-            <input id="projectTitle" type="text" value="Malayalam Translation Project" />
+            Licensed Malayalam Bible text
+            <textarea id="bsiText" rows="10" placeholder="Paste licensed Bible Society of India Malayalam verse text here."></textarea>
           </label>
-          <label>
-            Section
-            <input id="sectionRef" type="text" placeholder="Example: Matthew 5:1-12" />
-          </label>
-          <label>
-            Editor
-            <input id="editorName" type="text" placeholder="Name" />
-          </label>
+          <button id="insertBsiBtn" type="button">Place at Top</button>
+          <p class="hint">Do not publish or distribute BSI text unless your project has permission/license.</p>
         </section>
 
         <section>
@@ -66,27 +60,6 @@
         </section>
 
         <section>
-          <h2>Images</h2>
-          <label>
-            Upload image / map / picture
-            <input id="imageFileInput" type="file" accept="image/*" />
-          </label>
-          <button id="insertImageBtn" type="button">Insert Selected Image</button>
-          <p class="hint">You can also paste an image with Ctrl+V. The editor stores an image marker; the viewing/print preview shows the actual image.</p>
-          <div id="imageGallery" class="image-gallery"></div>
-        </section>
-
-        <section>
-          <h2>BSI Verse Text</h2>
-          <label>
-            Licensed Malayalam Bible text
-            <textarea id="bsiText" rows="8" placeholder="Paste licensed Bible Society of India Malayalam verse text here."></textarea>
-          </label>
-          <button id="insertBsiBtn" type="button">Place at Top</button>
-          <p class="hint">Do not publish or distribute BSI text unless your project has permission/license.</p>
-        </section>
-
-        <section>
           <h2>Glossary</h2>
           <label>
             Terms
@@ -102,6 +75,12 @@ salvation=രക്ഷ</textarea>
       </aside>
 
       <section class="editor-shell">
+        <div class="project-strip">
+          <label>
+            Project Title
+            <input id="projectTitle" type="text" value="Malayalam Translation Project" />
+          </label>
+        </div>
         <nav class="tabs" aria-label="Editor views">
           <button class="tab active" data-view="source" type="button">Source</button>
           <button class="tab" data-view="compose" type="button">Compose</button>
@@ -127,12 +106,19 @@ salvation=രക്ഷ</textarea>
               <span class="editor-title-row">
                 Editable Malayalam Translation
                 <span class="mode-buttons">
+                  <button id="undoEditBtn" class="secondary" type="button">Undo</button>
+                  <button id="redoEditBtn" class="secondary" type="button">Redo</button>
+                  <button id="deleteSelectionBtn" class="secondary danger" type="button">Delete</button>
+                  <button id="editorOptionsBtn" class="secondary" type="button">Options</button>
                   <button id="copyLayoutInlineBtn" class="secondary" type="button">Copy Source Layout</button>
                   <button id="addTextBlockBtn" class="secondary" type="button">Add Text Block</button>
                   <button id="textModeBtn" class="secondary" type="button">Text</button>
                   <button id="layoutModeBtn" class="secondary" type="button">Page Layout</button>
                 </span>
               </span>
+              <div id="editorOptionsPanel" class="editor-options-panel hidden">
+                Select a layout text block/table and click Delete to remove it. Undo and Redo restore recent layout/text actions.
+              </div>
               <textarea id="malayalamText" lang="ml" placeholder="Upload Malayalam PDF/DOCX/text or type Malayalam translation here."></textarea>
               <div id="malayalamLayoutEditor" class="layout-editor hidden" lang="ml"></div>
             </label>
