@@ -49,6 +49,11 @@ button.secondary,
   border-color: var(--line);
 }
 
+button.danger {
+  border-color: #a73f2b;
+  color: #a73f2b;
+}
+
 label {
   display: grid;
   gap: 6px;
@@ -157,7 +162,17 @@ h2 {
 .editor-shell {
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
+}
+
+.project-strip {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.project-strip label {
+  max-width: 520px;
 }
 
 .tabs {
@@ -255,6 +270,7 @@ h2 {
 
 .mode-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -316,6 +332,26 @@ h2 {
   border-color: var(--accent);
   background: #fff;
   outline: none;
+}
+
+.layout-block.selected,
+.layout-table.selected {
+  border-color: var(--accent-2);
+  background: #fff7f4;
+}
+
+.editor-options-panel {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--soft);
+  color: var(--muted);
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.editor-options-panel.hidden {
+  display: none;
 }
 
 .layout-table {
