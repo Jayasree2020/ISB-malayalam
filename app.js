@@ -217,12 +217,70 @@ async function extractDocxPages(file) {
   return splitTextIntoPages(result.value || "");
 }
 
+function stripRtf(value) {
+  return value
+    .replace(/\\par[d]?/g, "\n")
+    .replace(/\\'[0-9a-fA-F]{2}/g, " ")
+    .replace(/\\u(-?\d+)\??/g, (match, code) => String.fromCharCode(Number(code)))
+    .replace(/[{}]/g, "")
+    .replace(/\\[a-zA-Z]+-?\d* ?/g, "")
+    .replace(/\s+\n/g, "\n")
+    .replace(/\n\s+/g, "\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+function cleanLegacyDocText(value) {
+  return value
+    .replace(/<[^>]+>/g, " ")
+    .replace(/[^\S\r\n]+/g, " ")
+    .replace(/[^\u0009\u000A\u000D\u0020-\u007E\u00A0-\uFFFF]/g, " ")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function extractPrintableRuns(text) {
+  const runs = text.match(/[\u0020-\u007E\u00A0-\uFFFF]{12,}/g) || [];
+  return runs
+    .map((run) => cleanLegacyDocText(run))
+    .filter((run) => /[\p{L}\u0D00-\u0D7F]/u.test(run))
+    .join("\n");
+}
+
+async function extractLegacyDocPages(file) {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const signature = Array.from(bytes.slice(0, 8)).map((byte) => byte.toString(16).padStart(2, "0")).join(" ");
+
+  const utf8 = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+  if (/<html|<!doctype html/i.test(utf8)) {
+    const doc = new DOMParser().parseFromString(utf8, "text/html");
+    return splitTextIntoPages(cleanLegacyDocText(doc.body?.innerText || utf8));
+  }
+  if (/^{\\rtf/i.test(utf8)) return splitTextIntoPages(stripRtf(utf8));
+
+  const utf16 = new TextDecoder("utf-16le", { fatal: false }).decode(bytes);
+  const utf16Runs = extractPrintableRuns(utf16);
+  const ansiRuns = extractPrintableRuns(new TextDecoder("windows-1252", { fatal: false }).decode(bytes));
+  const best = utf16Runs.length > ansiRuns.length ? utf16Runs : ansiRuns;
+  const cleaned = cleanLegacyDocText(best);
+
+  if (cleaned.length < 40) {
+    throw new Error(`This looks like an old binary Word .doc file (${signature}). Please save it as .docx or PDF for reliable import.`);
+  }
+
+  return splitTextIntoPages(cleaned);
+}
+
 async function extractFilePages(file) {
   if (/\.pdf$/i.test(file.name)) return extractPdfPages(file);
   if (/\.docx$/i.test(file.name)) return extractDocxPages(file);
+  if (/\.doc$/i.test(file.name)) return extractLegacyDocPages(file);
+  if (/\.rtf$/i.test(file.name)) return splitTextIntoPages(stripRtf(await file.text()));
   if (/\.(txt|md|html)$/i.test(file.name)) return splitTextIntoPages(await file.text());
   if (file.type.startsWith("image/")) return [""];
-  throw new Error("Please upload PDF, DOCX, TXT, MD, or HTML.");
+  throw new Error("Please upload PDF, DOC, DOCX, RTF, TXT, MD, HTML, or an image.");
 }
 
 function setSourceViewer(file, pages = []) {
@@ -231,7 +289,7 @@ function setSourceViewer(file, pages = []) {
   let type = "text";
   if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") type = "pdf";
   if (file.type.startsWith("image/")) type = "image";
-  if (/\.docx$/i.test(file.name)) type = "docx";
+  if (/\.(doc|docx|rtf)$/i.test(file.name)) type = "doc";
 
   sourceViewerFile = {
     name: file.name,
