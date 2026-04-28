@@ -243,6 +243,44 @@ h2 {
   overflow: auto;
 }
 
+.image-gallery {
+  display: grid;
+  gap: 8px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.image-item {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.image-item.selected {
+  border-color: var(--accent);
+  background: var(--soft);
+}
+
+.image-item img {
+  width: 64px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+}
+
+.image-name {
+  color: var(--ink);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
 .suggestion {
   display: flex;
   justify-content: space-between;
@@ -280,6 +318,23 @@ h2 {
   color: var(--accent-2);
   font-weight: 700;
   padding-right: 5px;
+}
+
+.print-image {
+  margin: 16px 0;
+}
+
+.print-image img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--line);
+}
+
+.print-image figcaption {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 10pt;
 }
 
 .check-list {
