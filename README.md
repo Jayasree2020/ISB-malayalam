@@ -21,6 +21,8 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 - Can copy the current English PDF page structure into an editable Malayalam page-layout editor.
 - Creates a blank page-format layout when the PDF is scanned or has no selectable text.
 - Adds manual text blocks and editable tables for layout correction.
+- Displays Malayalam editing text with `MLW-TTKarthika` first in the font stack.
+- Keeps normal Western numerals and preserves English abbreviations when Malayalam text is pasted into layout blocks.
 - Imports or pastes images, maps, and pictures, then shows them in the viewing/print preview.
 - Places licensed BSI Malayalam verse text at the top and translated notes below.
 - Inserts verse markers, reference markers, symbols, Malayalam characters, and glossary terms.
