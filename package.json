@@ -1,0 +1,17 @@
+{
+  "name": "malayalam-translation-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Editorial workspace for Malayalam Bible-note translation, review, and print export.",
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "@google-cloud/translate": "^9.2.0",
+    "@neondatabase/serverless": "^1.0.2"
+  },
+  "devDependencies": {
+    "vercel": "^39.2.5"
+  }
+}
