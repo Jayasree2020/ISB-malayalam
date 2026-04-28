@@ -204,24 +204,41 @@ h2 {
 
 .split {
   display: grid;
-  grid-template-columns: minmax(260px, var(--source-width, 50%)) 10px minmax(320px, 1fr);
-  gap: 8px;
+  grid-template-columns: minmax(220px, var(--source-width, 50%)) 18px minmax(280px, 1fr);
+  gap: 6px;
   height: calc(100vh - 150px);
 }
 
 .split-resize-handle {
-  width: 10px;
+  width: 18px;
   height: 100%;
   border-radius: 6px;
-  background: linear-gradient(90deg, transparent 0 3px, var(--line) 3px 7px, transparent 7px 10px);
+  background: var(--soft);
+  border: 1px solid var(--line);
+  color: var(--accent);
   cursor: col-resize;
   touch-action: none;
+  display: grid;
+  place-items: center;
+  user-select: none;
+}
+
+.split-resize-handle span {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .split-resize-handle:hover,
 .split-resize-handle:focus {
-  background: linear-gradient(90deg, transparent 0 3px, var(--accent) 3px 7px, transparent 7px 10px);
+  background: #dbece4;
+  border-color: var(--accent);
   outline: none;
+}
+
+body.resizing-columns {
+  cursor: col-resize;
+  user-select: none;
 }
 
 .viewer-block {
@@ -229,6 +246,7 @@ h2 {
   grid-template-rows: auto minmax(260px, 1fr) auto;
   gap: 8px;
   min-height: 0;
+  min-width: 0;
 }
 
 .viewer-header {
@@ -277,6 +295,7 @@ h2 {
 
 .editor-block {
   height: 100%;
+  min-width: 0;
 }
 
 .editor-title-row {
