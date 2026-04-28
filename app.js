@@ -55,7 +55,6 @@ let selectedLayoutBlock = null;
 let undoStack = [];
 let redoStack = [];
 let suppressHistory = false;
-let splitSourceWidth = Number(localStorage.getItem("mlTranslationWorkbench:sourceWidth") || 50);
 let malayalamZoom = Number(localStorage.getItem("mlTranslationWorkbench:malayalamZoom") || 100);
 
 if (window.pdfjsLib) {
@@ -67,13 +66,6 @@ function toast(message) {
   box.textContent = message;
   box.classList.add("show");
   setTimeout(() => box.classList.remove("show"), 2400);
-}
-
-function applySplitWidth(value) {
-  splitSourceWidth = Math.min(Math.max(Number(value) || 50, 25), 72);
-  $("sourceSplit")?.style.setProperty("--source-width", `${splitSourceWidth}%`);
-  localStorage.setItem("mlTranslationWorkbench:sourceWidth", String(splitSourceWidth));
-  renderMalayalamLayout();
 }
 
 function applyMalayalamZoom(value) {
@@ -1163,39 +1155,6 @@ function bindEvents() {
   });
   $("zoomOutMalayalamBtn").addEventListener("click", () => applyMalayalamZoom(malayalamZoom - 10));
   $("zoomInMalayalamBtn").addEventListener("click", () => applyMalayalamZoom(malayalamZoom + 10));
-  const resizeHandle = $("splitResizeHandle");
-  resizeHandle?.addEventListener("pointerdown", (event) => {
-    const split = $("sourceSplit");
-    if (!split) return;
-    event.preventDefault();
-    resizeHandle.setPointerCapture(event.pointerId);
-    document.body.classList.add("resizing-columns");
-    const onMove = (moveEvent) => {
-      const rect = split.getBoundingClientRect();
-      const percent = ((moveEvent.clientX - rect.left) / rect.width) * 100;
-      applySplitWidth(percent);
-    };
-    const onUp = () => {
-      document.removeEventListener("pointermove", onMove);
-      document.removeEventListener("pointerup", onUp);
-      document.removeEventListener("pointercancel", onUp);
-      document.body.classList.remove("resizing-columns");
-    };
-    document.addEventListener("pointermove", onMove);
-    document.addEventListener("pointerup", onUp);
-    document.addEventListener("pointercancel", onUp);
-  });
-  resizeHandle?.addEventListener("dblclick", () => applySplitWidth(50));
-  resizeHandle?.addEventListener("keydown", (event) => {
-    if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      applySplitWidth(splitSourceWidth - 3);
-    }
-    if (event.key === "ArrowRight") {
-      event.preventDefault();
-      applySplitWidth(splitSourceWidth + 3);
-    }
-  });
   $("prevPageBtn").addEventListener("click", () => showPage(currentPage - 1));
   $("nextPageBtn").addEventListener("click", () => showPage(currentPage + 1));
   $("pageNumber").addEventListener("change", () => showPage($("pageNumber").value));
@@ -1294,7 +1253,6 @@ function buildMalayalamKeyboard() {
 
 buildMalayalamKeyboard();
 bindEvents();
-applySplitWidth(splitSourceWidth);
 applyMalayalamZoom(malayalamZoom);
 updatePageStatus();
 renderImageGallery();
