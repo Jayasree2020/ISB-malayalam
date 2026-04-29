@@ -532,22 +532,44 @@ async function extractDocxTextFromXml(arrayBuffer) {
   if (!window.JSZip) return "";
   try {
     const zip = await window.JSZip.loadAsync(arrayBuffer);
-    const file = zip.file("word/document.xml");
-    if (!file) return "";
-    const xml = await file.async("text");
-    return xml
-      .match(/<w:t\b[^>]*>[\s\S]*?<\/w:t>|<w:tab\b[^>]*\/>|<w:br\b[^>]*\/>|<\/w:p>/g)
-      ?.map((part) => {
-        if (/^<w:tab\b/.test(part)) return "\t";
-        if (/^<w:br\b|^<\/w:p>/.test(part)) return "\n";
-        return decodeXmlEntities(part.replace(/^<w:t\b[^>]*>/, "").replace(/<\/w:t>$/, ""));
-      })
-      .join("")
+    const paths = docxTextPartPaths(zip);
+    const text = [];
+    for (const path of paths) {
+      const file = zip.file(path);
+      if (!file) continue;
+      const partText = extractTextFromDocxXmlPart(await file.async("text"));
+      if (partText) text.push(partText);
+    }
+    return text
+      .join("\n\n")
       .replace(/\n{3,}/g, "\n\n")
       .trimEnd() || "";
   } catch {
     return "";
   }
+}
+
+function docxTextPartPaths(zip) {
+  const allPaths = Object.keys(zip.files || {});
+  const secondary = allPaths
+    .filter((path) => /^word\/(?:headers?|footers?|footnotes|endnotes|comments|glossary\/document)\d*\.xml$/i.test(path))
+    .sort((a, b) => a.localeCompare(b));
+  return ["word/document.xml", ...secondary.filter((path) => path !== "word/document.xml")];
+}
+
+function extractTextFromDocxXmlPart(xml) {
+  return xml
+    .match(/<(?:w|a):t\b[^>]*>[\s\S]*?<\/(?:w|a):t>|<w:tab\b[^>]*\/>|<w:(?:br|cr)\b[^>]*\/>|<\/w:tc>|<\/w:tr>|<\/w:p>/g)
+    ?.map((part) => {
+      if (/^<w:tab\b|^<\/w:tc>/.test(part)) return "\t";
+      if (/^<w:(?:br|cr)\b|^<\/w:tr>|^<\/w:p>/.test(part)) return "\n";
+      return decodeXmlEntities(part.replace(/^<(?:w|a):t\b[^>]*>/, "").replace(/<\/(?:w|a):t>$/, ""));
+    })
+    .join("")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\t+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trimEnd() || "";
 }
 
 function stripRtf(value) {
