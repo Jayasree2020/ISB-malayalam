@@ -373,6 +373,19 @@ function cleanImportedWordText(text) {
     .trimEnd();
 }
 
+function cleanPreservedWordText(text) {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .replace(/\u00a0/g, " ")
+    .replace(/[\u00ff\u00fe\ufffd\uffff\ufffe\ufdd0-\ufdef]{2,}/g, "")
+    .replace(/[\uffff\ufffe\ufdd0-\ufdef]/g, "")
+    .split("\n")
+    .map(cleanImportedLine)
+    .join("\n")
+    .replace(/\n{5,}/g, "\n\n\n\n")
+    .trimEnd();
+}
+
 function readableTextScore(text) {
   const cleaned = text.replace(/\s/g, "");
   if (!cleaned.length) return 0;
@@ -484,7 +497,7 @@ async function extractDocxPages(file) {
   if (detectedFont) setDetectedDocumentFont(detectedFont);
   const xmlText = await extractDocxTextFromXml(arrayBuffer);
   if (xmlText && readableTextScore(xmlText) >= 0.35) {
-    return splitTextIntoPages(cleanImportedWordText(xmlText));
+    return splitTextIntoPages(cleanPreservedWordText(xmlText));
   }
   const result = await window.mammoth.extractRawText({ arrayBuffer });
   return splitTextIntoPages(cleanImportedWordText(result.value || ""));
@@ -532,12 +545,13 @@ async function extractDocxTextFromXml(arrayBuffer) {
   if (!window.JSZip) return "";
   try {
     const zip = await window.JSZip.loadAsync(arrayBuffer);
+    const numbering = await parseDocxNumbering(zip);
     const paths = docxTextPartPaths(zip);
     const text = [];
     for (const path of paths) {
       const file = zip.file(path);
       if (!file) continue;
-      const partText = extractTextFromDocxXmlPart(await file.async("text"));
+      const partText = extractTextFromDocxXmlPart(await file.async("text"), numbering);
       if (partText) text.push(partText);
     }
     return text
@@ -557,19 +571,91 @@ function docxTextPartPaths(zip) {
   return ["word/document.xml", ...secondary.filter((path) => path !== "word/document.xml")];
 }
 
-function extractTextFromDocxXmlPart(xml) {
+function extractTextFromDocxXmlPart(xml, numbering = null) {
   return xml
-    .match(/<(?:w|a):t\b[^>]*>[\s\S]*?<\/(?:w|a):t>|<w:tab\b[^>]*\/>|<w:(?:br|cr)\b[^>]*\/>|<\/w:tc>|<\/w:tr>|<\/w:p>/g)
+    .match(/<w:p\b[\s\S]*?<\/w:p>|<\/w:tc>|<\/w:tr>/g)
     ?.map((part) => {
-      if (/^<w:tab\b|^<\/w:tc>/.test(part)) return "\t";
-      if (/^<w:(?:br|cr)\b|^<\/w:tr>|^<\/w:p>/.test(part)) return "\n";
-      return decodeXmlEntities(part.replace(/^<(?:w|a):t\b[^>]*>/, "").replace(/<\/(?:w|a):t>$/, ""));
+      if (/^<\/w:tc>/.test(part)) return "\t";
+      if (/^<\/w:tr>/.test(part)) return "\n";
+      const paragraph = extractDocxParagraphText(part);
+      if (!paragraph) return "\n";
+      return `${numberingPrefixForParagraph(part, numbering)}${paragraph}\n`;
     })
     .join("")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\t+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trimEnd() || "";
+}
+
+function extractDocxParagraphText(paragraphXml) {
+  return paragraphXml
+    .match(/<(?:w|a):t\b[^>]*>[\s\S]*?<\/(?:w|a):t>|<w:tab\b[^>]*\/>|<w:(?:br|cr)\b[^>]*\/>/g)
+    ?.map((part) => {
+      if (/^<w:tab\b/.test(part)) return "\t";
+      if (/^<w:(?:br|cr)\b/.test(part)) return "\n";
+      return decodeXmlEntities(part.replace(/^<(?:w|a):t\b[^>]*>/, "").replace(/<\/(?:w|a):t>$/, ""));
+    })
+    .join("") || "";
+}
+
+async function parseDocxNumbering(zip) {
+  const file = zip.file("word/numbering.xml");
+  if (!file) return null;
+  const xml = await file.async("text");
+  const abstractLevels = new Map();
+  (xml.match(/<w:abstractNum\b[\s\S]*?<\/w:abstractNum>/g) || []).forEach((abstractXml) => {
+    const abstractId = readWordVal(abstractXml.match(/<w:abstractNum\b[^>]*>/)?.[0] || "", "w:abstractNumId");
+    if (!abstractId) return;
+    const levels = new Map();
+    (abstractXml.match(/<w:lvl\b[\s\S]*?<\/w:lvl>/g) || []).forEach((levelXml) => {
+      const ilvl = readWordVal(levelXml.match(/<w:lvl\b[^>]*>/)?.[0] || "", "w:ilvl") || "0";
+      levels.set(ilvl, {
+        start: Number(readWordVal(levelXml, "w:start") || 1),
+        format: readWordVal(levelXml, "w:numFmt") || "decimal",
+        text: readWordVal(levelXml, "w:lvlText") || "%1."
+      });
+    });
+    abstractLevels.set(abstractId, levels);
+  });
+
+  const numToAbstract = new Map();
+  (xml.match(/<w:num\b[\s\S]*?<\/w:num>/g) || []).forEach((numXml) => {
+    const numId = readWordVal(numXml.match(/<w:num\b[^>]*>/)?.[0] || "", "w:numId");
+    const abstractId = readWordVal(numXml, "w:abstractNumId");
+    if (numId && abstractId) numToAbstract.set(numId, abstractId);
+  });
+
+  return { abstractLevels, numToAbstract, counters: new Map() };
+}
+
+function readWordVal(xml, name) {
+  return new RegExp(`<${name}\\b[^>]*w:val="([^"]+)"`).exec(xml)?.[1] || "";
+}
+
+function numberingPrefixForParagraph(paragraphXml, numbering) {
+  if (!numbering) return "";
+  const numPr = paragraphXml.match(/<w:numPr\b[\s\S]*?<\/w:numPr>/)?.[0] || "";
+  if (!numPr) return "";
+  const numId = readWordVal(numPr, "w:numId");
+  const ilvl = readWordVal(numPr, "w:ilvl") || "0";
+  const abstractId = numbering.numToAbstract.get(numId);
+  const level = numbering.abstractLevels.get(abstractId)?.get(ilvl);
+  if (!numId || !level) return "";
+
+  const counterKey = `${numId}:${ilvl}`;
+  const depth = Number(ilvl);
+  Array.from(numbering.counters.keys()).forEach((key) => {
+    const [, keyLevel] = key.split(":");
+    if (key.startsWith(`${numId}:`) && Number(keyLevel) > depth) numbering.counters.delete(key);
+  });
+  const next = (numbering.counters.get(counterKey) ?? (level.start - 1)) + 1;
+  numbering.counters.set(counterKey, next);
+
+  if (/bullet/i.test(level.format)) return "• ";
+  const values = Array.from({ length: depth + 1 }, (_, index) => numbering.counters.get(`${numId}:${index}`) || 1);
+  const label = level.text.replace(/%(\d+)/g, (match, number) => values[Number(number) - 1] || "");
+  return `${label} `;
 }
 
 function stripRtf(value) {
