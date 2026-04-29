@@ -692,8 +692,7 @@ async function extractLegacyDocPages(file) {
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);
   const signature = Array.from(bytes.slice(0, 8)).map((byte) => byte.toString(16).padStart(2, "0")).join(" ");
-  const isOleBinaryDoc = bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0;
-  if (isOleBinaryDoc) {
+  if (isOleBinaryBytes(bytes)) {
     throw new Error("This is an old binary Word .doc file. Please open it in Word, save it as .docx or PDF, then upload that file. The browser cannot safely display this .doc without showing binary junk.");
   }
 
@@ -718,6 +717,9 @@ async function extractLegacyDocPages(file) {
 }
 
 async function extractFilePages(file) {
+  if (await isOleBinaryFile(file)) {
+    throw new Error("This is an old binary Word .doc file. Please open it in Word, save it as .docx or PDF, then upload that file. The browser cannot safely display this .doc without showing binary junk.");
+  }
   if (/\.pdf$/i.test(file.name)) return extractPdfPages(file);
   if (/\.docx$/i.test(file.name)) return extractDocxPages(file);
   if (/\.doc$/i.test(file.name)) return extractLegacyDocPages(file);
@@ -725,6 +727,16 @@ async function extractFilePages(file) {
   if (/\.(txt|md|html)$/i.test(file.name)) return splitTextIntoPages(cleanImportedWordText(await file.text()));
   if (file.type.startsWith("image/")) return [""];
   throw new Error("Please upload PDF, DOC, DOCX, RTF, TXT, MD, HTML, or an image.");
+}
+
+function isOleBinaryBytes(bytes) {
+  return bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0;
+}
+
+async function isOleBinaryFile(file) {
+  if (!file || file.type.startsWith("image/")) return false;
+  const bytes = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+  return isOleBinaryBytes(bytes);
 }
 
 function setSourceViewer(file, pages = []) {
@@ -851,6 +863,31 @@ async function importIntoTarget(file, target) {
   }
 
   showPage(currentPage);
+}
+
+function clearImportTarget(target) {
+  if (target === "english") {
+    englishPages = [];
+    englishLayouts = [];
+    sourceViewerFile = null;
+    if ($("englishText")) $("englishText").value = "";
+    renderSourceViewer();
+  } else {
+    malayalamPages = [];
+    malayalamLayouts = [];
+    malayalamEditMode = "text";
+    if ($("malayalamText")) $("malayalamText").value = "";
+    if ($("malayalamFileInput")) $("malayalamFileInput").value = "";
+    renderMalayalamLayout();
+    applyMalayalamMode();
+  }
+  currentPage = 1;
+  updatePageStatus();
+  renderPreview();
+}
+
+function importErrorMessage(error) {
+  return error?.message || "The file could not be read. Please upload DOCX, PDF, RTF, or text.";
 }
 
 function createMalayalamLayoutFromSource() {
@@ -1480,7 +1517,8 @@ function bindEvents() {
     try {
       await importIntoTarget(file, "english");
     } catch (error) {
-      $("importStatus").textContent = `Could not read English file: ${error.message}`;
+      clearImportTarget("english");
+      $("importStatus").textContent = `Could not read English file: ${importErrorMessage(error)}`;
       toast("English import failed.");
     }
   });
@@ -1491,7 +1529,8 @@ function bindEvents() {
     try {
       await importIntoTarget(file, "malayalam");
     } catch (error) {
-      $("importStatus").textContent = `Could not read Malayalam file: ${error.message}`;
+      clearImportTarget("malayalam");
+      $("importStatus").textContent = `Could not read Malayalam file: ${importErrorMessage(error)}`;
       toast("Malayalam import failed.");
     }
   });
