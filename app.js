@@ -566,7 +566,9 @@ async function extractDocxTextFromXml(arrayBuffer) {
 function docxTextPartPaths(zip) {
   const allPaths = Object.keys(zip.files || {});
   const secondary = allPaths
-    .filter((path) => /^word\/(?:headers?|footers?|footnotes|endnotes|comments|glossary\/document)\d*\.xml$/i.test(path))
+    .filter((path) => /^word\/.+\.xml$/i.test(path))
+    .filter((path) => !/^word\/(?:styles|settings|numbering|fontTable|webSettings)\.xml$/i.test(path))
+    .filter((path) => !/^word\/theme\//i.test(path))
     .sort((a, b) => a.localeCompare(b));
   return ["word/document.xml", ...secondary.filter((path) => path !== "word/document.xml")];
 }
@@ -679,10 +681,10 @@ function cleanLegacyDocText(value) {
 }
 
 function extractPrintableRuns(text) {
-  const runs = text.match(/[\u0020-\u007E\u00A0-\uFFFF]{12,}/g) || [];
+  const runs = text.match(/[\u0020-\u007E\u00A0-\u024F\u0D00-\u0D7F]{2,}/g) || [];
   return runs
     .map((run) => cleanLegacyDocText(run))
-    .filter((run) => /[\p{L}\u0D00-\u0D7F]/u.test(run))
+    .filter((run) => /[\p{L}\p{N}\u0D00-\u0D7F]/u.test(run))
     .join("\n");
 }
 
@@ -704,7 +706,7 @@ async function extractLegacyDocPages(file) {
   const best = utf16Runs.length > ansiRuns.length ? utf16Runs : ansiRuns;
   const cleaned = cleanLegacyDocText(best);
 
-  if (cleaned.length < 40 || readableTextScore(cleaned) < 0.45) {
+  if (cleaned.length < 8 || readableTextScore(cleaned) < 0.35) {
     throw new Error(`This looks like an old binary Word .doc file (${signature}). Please save it as .docx or PDF for reliable import.`);
   }
 
