@@ -15,7 +15,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 ## What The Workspace Does Now
 
 - Stores project title, section reference, editor name, English source, Malayalam translation, BSI verse text, final print body, glossary, and editor notes.
-- Extracts text from uploaded PDF, DOCX, RTF, text, and many legacy DOC files page by page in the browser.
+- Extracts text from uploaded PDF, DOCX, DOC, RTF, text, and many legacy Word files page by page.
 - Shows the original English source beside the editable Malayalam translation.
 - Keeps PDF files visible as PDFs, so the English page can be viewed as it is while Malayalam is edited.
 - Can copy the current English PDF page structure into an editable Malayalam page-layout editor.
@@ -24,7 +24,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 - Adds Undo, Redo, Delete, and Options controls in the Malayalam editing section.
 - Keeps the BSI Bible text box on the left and the project title above the editing window.
 - Treats the Malayalam translation/editing window as the main document. Word/PDF/InDesign exports use only that window.
-- Displays the Malayalam translation window in `MLW-TTKarthika` by default, with a selector for `Document Font`, Unicode font, or MLW-TTKarthika.
+- Displays the Malayalam translation window in `MLW-TTKarthika` by default, with a selector for `Document Font`, Unicode font, or MLW-TTKarthika, and keeps editing set for English-keyboard input.
 - Detects the declared font inside uploaded DOCX files and can apply that document font to the Malayalam editing window.
 - Keeps normal Western numerals and preserves English abbreviations when Malayalam text is pasted into layout blocks.
 - Preserves imported Word spacing, line breaks, indentation, and tabs as closely as possible in the editing window.
@@ -77,7 +77,7 @@ Bible Society of India Malayalam Bible text is not bundled here. Paste or import
 - Glossary: type an English word in `English word meaning` and click `Find Malayalam Meaning`.
 - Browser save: click `Save` to store browser work, click `Load` to restore it, or click `Delete Saved` to remove saved browser work and clear the display.
 - Malayalam typing: use the Malayalam editor directly, the built-in Malayalam character buttons, or the `Google Malayalam Typing` button.
-- Word import: DOCX/RTF/PDF are most reliable. Legacy `.doc` is best effort; if text is missing, save the file as `.docx` or PDF and upload again.
+- Word import: DOCX/RTF/PDF work in the browser. Legacy `.doc` is handled through the Vercel extraction API; if a damaged file still cannot be read, save it as `.docx` or PDF and upload again.
 - Google എഴുത്ത് ഉപകരണങ്ങൾ: use the `Google Malayalam Typing` button in the Malayalam Typing panel.
 
 ## Project Structure

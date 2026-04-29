@@ -693,7 +693,7 @@ async function extractLegacyDocPages(file) {
   const bytes = new Uint8Array(buffer);
   const signature = Array.from(bytes.slice(0, 8)).map((byte) => byte.toString(16).padStart(2, "0")).join(" ");
   if (isOleBinaryBytes(bytes)) {
-    throw new Error("This is an old binary Word .doc file. Please open it in Word, save it as .docx or PDF, then upload that file. The browser cannot safely display this .doc without showing binary junk.");
+    return extractServerDocPages(file);
   }
 
   const utf8 = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
@@ -718,7 +718,7 @@ async function extractLegacyDocPages(file) {
 
 async function extractFilePages(file) {
   if (await isOleBinaryFile(file)) {
-    throw new Error("This is an old binary Word .doc file. Please open it in Word, save it as .docx or PDF, then upload that file. The browser cannot safely display this .doc without showing binary junk.");
+    return extractServerDocPages(file);
   }
   if (/\.pdf$/i.test(file.name)) return extractPdfPages(file);
   if (/\.docx$/i.test(file.name)) return extractDocxPages(file);
@@ -727,6 +727,40 @@ async function extractFilePages(file) {
   if (/\.(txt|md|html)$/i.test(file.name)) return splitTextIntoPages(cleanImportedWordText(await file.text()));
   if (file.type.startsWith("image/")) return [""];
   throw new Error("Please upload PDF, DOC, DOCX, RTF, TXT, MD, HTML, or an image.");
+}
+
+async function fileToBase64Content(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function extractServerDocPages(file) {
+  const response = await fetch("/api/extract-doc", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      fileName: file.name,
+      fileBase64: await fileToBase64Content(file)
+    })
+  });
+
+  if (!response.ok) {
+    const message = (await response.text()).trim();
+    throw new Error(message || "Could not read this Word document. Please save it as DOCX or PDF and upload again.");
+  }
+
+  const data = await response.json();
+  const text = cleanPreservedWordText(data.text || "");
+  if (!text.trim()) {
+    throw new Error("No readable text was found in this Word document. Please save it as DOCX or PDF and upload again.");
+  }
+
+  return splitTextIntoPages(text);
 }
 
 function isOleBinaryBytes(bytes) {
