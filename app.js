@@ -692,6 +692,10 @@ async function extractLegacyDocPages(file) {
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);
   const signature = Array.from(bytes.slice(0, 8)).map((byte) => byte.toString(16).padStart(2, "0")).join(" ");
+  const isOleBinaryDoc = bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0;
+  if (isOleBinaryDoc) {
+    throw new Error("This is an old binary Word .doc file. Please open it in Word, save it as .docx or PDF, then upload that file. The browser cannot safely display this .doc without showing binary junk.");
+  }
 
   const utf8 = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
   if (/<html|<!doctype html/i.test(utf8)) {
